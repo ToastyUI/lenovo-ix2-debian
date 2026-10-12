@@ -4,4 +4,10 @@ set -e; k="$1"; cd /boot
 case "$k" in A|B) ;; *) echo "gebruik: kies-kernel A|B (nu: $(cat /boot/kernel-keuze 2>/dev/null || echo A))"; exit 1;; esac
 cp -f "uImage.$k" uImage; cp -f "uInitrd.$k" uInitrd; sync
 echo "$k" > /boot/kernel-keuze; sync
-echo "Kernel $k gekozen. Herstart met: reboot"
+# zram: A kent alleen LZO; B heeft LZ4 + ZSTD-hercompressie
+case "$k" in
+  A) alg="lzo-rle" ;;
+  B) alg="lz4 zstd(level=3) (type=idle)" ;;
+esac
+sed -i "s/^compression-algorithm.*/compression-algorithm = $alg/" /etc/systemd/zram-generator.conf
+echo "Kernel $k gekozen (zram: $alg). Herstart met: reboot"

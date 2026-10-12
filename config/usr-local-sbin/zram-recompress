@@ -1,0 +1,7 @@
+#!/bin/sh
+# Hercomprimeer zram-paginas die >10 min niet gebruikt zijn met het tweede algoritme (zstd).
+# Alleen kernel B (ZRAM_MULTI_COMP + ZRAM_TRACK_ENTRY_ACTIME); op A doet dit niets.
+Z=/sys/block/zram0
+[ -w $Z/recompress ] && [ "$(cat $Z/initstate)" = 1 ] || exit 0
+echo 600 > $Z/idle 2>/dev/null || echo all > $Z/idle
+echo type=idle > $Z/recompress

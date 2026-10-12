@@ -6,8 +6,8 @@ Debian 13 (trixie) on a **Lenovo ix2 (ix2-ng)** NAS, booted from a USB stick, wi
 |---|---|
 | Hardware | Marvell Kirkwood 88F6282 (ARMv5TE, 1 core), 256 MB RAM, 512 KB SPI flash (U-Boot 0.0.8), 2× SATA, 1× USB 2.0, 1 GbE |
 | Userland | Debian 13 armel, minimal (debootstrap `minbase`, ~420 MB) |
-| Kernel A | bodhi's `7.1.9-kirkwood-tld-1` (forum.doozan.com), default |
-| Kernel B | `7.1.9-ix2perf-1`: same source, patch and config as A, plus MGLRU, PSI and zram LZ4/ZSTD recompression |
+| Kernel A | bodhi's `7.1.9-kirkwood-tld-1` (forum.doozan.com) |
+| Kernel B | `7.1.9-ix2perf-1`: same source, patch and config as A, plus MGLRU, PSI and zram LZ4/ZSTD recompression. **Default**: 13–31% faster reads |
 | Storage | md RAID 1 (internal bitmap) + ext4 `fast_commit` on the data partitions; the LifeLine system array and boot sectors are left intact |
 | Sharing | NFS v4.2 only; SMB via ksmbd (in-kernel) or Samba 4.22 |
 
@@ -15,6 +15,7 @@ Debian 13 (trixie) on a **Lenovo ix2 (ix2-ng)** NAS, booted from a USB stick, wi
 
 ```
 docs/       handleiding.md (Dutch step-by-step guide), kernel-options.md, benchmarks.md
+bench/      fio scripts used for docs/benchmarks.md
 rootfs/     build.sh (debootstrap rootfs + kernel A), tune.sh / tune2.sh (performance tuning), add-kernel-b.sh
 kernel/     build-kernel.sh, full configs for A and B, config.diff (A -> B)
 uboot/      fw_setenv-usb-boot.sh (USB boot with fallback), redacted U-Boot environments
