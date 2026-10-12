@@ -89,7 +89,97 @@ Client: Proxmox host with a temporary address on the NAS bridge (direct L2, not 
 
 `lz4` primary, `zstd(level=3)` recompression of pages idle > 10 min (`zram-recompress.timer`). `kies-kernel A` switches back to `lzo-rle` (A has no LZ4/ZSTD/multi-comp).
 
+## Memory pressure: A vs B (`bench/pressure.sh`, `bench/memhog.py`)
+
+A Python process allocates 150 MB (more than is free, ~2:1 compressible) and touches a 30 MB hot set every second, while the Proxmox host streams a 2 GB file over NFS for 60 s. One run per kernel, so small differences are noise.
+
+| Under pressure | A (classic LRU, zram lzo-rle) | B (MGLRU, zram lz4) |
+|---|---|---|
+| NFS read | 77.5 MiB/s | 74.9 MiB/s |
+| Hot set walk, p50 / p95 | 65.6 / 143.7 ms | **52.3 / 101.5 ms** |
+| 50 cold pages, p50 / p95 | **4.2 / 37.4 ms** | 17.0 / 47.1 ms |
+| Worst stall | **1.5 s** | 2.7 s |
+| File refaults | **3,414** | 6,887 |
+| Swap out / in (pages) | 9,593 / 1,982 | 5,142 / 3,699 |
+| zram ratio | **1.83** | 1.40 (zstd recompression not yet active, it starts after 10 min) |
+| PSI memory some / full (avg10) | n/a (no PSI in A) | 32% / 20% |
+
+MGLRU protects the active working set (−20% p50, −29% p95), but brings cold pages back more slowly and refaults more page cache. Mixed; no clear winner under pressure. Without pressure, B reads 13–31% faster, so **B stays the default**.
+
+Note: `swapoff -a; swapon -a` does not re-enable zram (it is not in fstab); the first run therefore had no swap and the probe was OOM-killed (by design, `oom_score_adj` 1000; NFS/ksmbd/sshd were unaffected).
+
+## Runtime tuning on B (`bench/runtime-tuning.sh`)
+
+Each setting alone, everything else at the default; NFS 1 MB blocks, `sync` export. Kernel C was compiling on the Proxmox host at the same time (nice 19), identical for all rows.
+
+| Setting | Direct read | App read | App write |
+|---|---|---|---|
+| Baseline | 86.7 | 87.3 | 36.1 |
+| `disable-splice-read` = 1 | **71.7** | **68.3** | 36.0 |
+| NIC `tx-usecs 100` | 89.2 | 86.7 | 36.0 |
+| NIC `rx-usecs 500 tx-usecs 100`, RX ring 512 | 90.3 | 87.7 | 35.2 |
+| Scheduler `none` | 87.7 | 86.0 | 36.2 |
+| 8 nfsd threads | 89.2 | 86.2 | 35.5 |
+
+- **Splice must stay on**: turning it off costs 17–22%. (So the DONTCACHE read gain did not come from disabling splice.)
+- NIC coalescing, scheduler and thread count are all within ~4% (noise). None adopted.
+- Conclusion: with 1 MB blocks the box is CPU-bound; only less work per byte (kernel C) can still help.
+
+## Kernel C (`7.1.9-ix2c-1` = B minus hardening/debug), 2026-10-12
+
+### NFS (1 MB blocks)
+
+| Test | A | B | **C** |
+|---|---|---|---|
+| Seq read direct | 69.9 | 79.0 | **106.9** |
+| App read | 67.5 | 88.5 | **97.9** (ix2 19% idle) |
+| Seq write direct, `sync` | 21.6 | 21.3 | 18.7 |
+| App write, `sync` | 35.8 | 34.9 | **40.4** |
+| Seq write direct, `async` | 40.1 | 38.8 | 43.4 |
+| App write, `async` | 38.7 | 38.7 | 42.4 |
+| Rand write 4k, `sync` | 44 IOPS | 44 IOPS | 43 IOPS |
+| NFS read under memory pressure | 77.5 | 74.9 | **91.2** |
+
+C with 16 nfsd threads (final configuration): direct read **108.2**, app read **99.3**, app write **41.5** MiB/s.
+
+### Local disk
+
+| Test | A | B | C |
+|---|---|---|---|
+| Seq write / read 1M direct | 121 / 149 | 121 / 147 | 122 / 145 |
+| Rand read / write 4k | 616 / 416 | 627 / 423 | 628 / 422 |
+| Write 4k + fsync | 18 | 19 | 11, 13, 16 (three runs; disk-cache-flush bound, noisy) |
+| Buffered read 1M | 117 (sys 82%) | 132 (sys 88%) | **138** (sys 78%) |
+
+### Memory pressure
+
+| | A | B | C |
+|---|---|---|---|
+| Hot set p50 / p95 | 65.6 / 143.7 ms | 52.3 / 101.5 ms | 74.7 / 129.2 ms |
+| Cold pages p50 | 4.2 ms | 17.0 ms | 13.3 ms |
+| Worst stall | 1.5 s | 2.7 s | 1.9 s |
+| NFS read meanwhile | 77.5 | 74.9 | **91.2** |
+
+On C the probe competes with 22% more NFS traffic for the page cache, which explains the slower hot set.
+
+### Correction: NFS random 4k reads
+
+The earlier NFS random-read numbers (A 966, B 899, C 317 IOPS) are **not comparable**: fio repeats the same "random" offsets by default (`randrepeat=1`), so the result depended on what the previous test left in the ix2's page cache. A probe of `/proc/diskstats` showed one run at 1616 IOPS with only 16% of requests reaching the disks.
+
+Fair test (`bench/nfs-randread-cold.sh`): `drop_caches` on the ix2 and `randrepeat=0`, 30 s, QD16 at the client, kernel C:
+
+| nfsd threads | Cold random 4k read | Memory used |
+|---|---|---|
+| 4 | 310 IOPS (every request hits the disks) | 87 MB |
+| 8 | 432 IOPS | 87 MB |
+| **16** | **620 IOPS** (= local disk, 628) | 103 MB |
+
+The limit was the number of nfsd threads (outstanding disk requests), not the kernel. **16 threads** adopted (`config/etc/nfs.conf.d/ix2.conf`); sequential throughput is unchanged.
+
+### Verdict
+
+**C is the default.** Large-file NFS reads +35% over B (+53% over A), app writes +16%, NFS under memory pressure +22%, with CPU headroom left over. Disk-bound results are unchanged. Trade-off: fewer kernel hardening features (acceptable on a trusted LAN only).
+
 ## Pending
 
 - SMB: ksmbd vs Samba
-- Memory-pressure test A vs B (MGLRU, PSI)

@@ -1,13 +1,13 @@
 #!/bin/sh
-# Gebruik: kies-kernel A|B   (A = bodhi, B = eigen ix2perf met MGLRU). Daarna: reboot
+# Gebruik: kies-kernel A|B|C   (A = bodhi, B = ix2perf MGLRU, C = B zonder hardening). Daarna: reboot
 set -e; k="$1"; cd /boot
-case "$k" in A|B) ;; *) echo "gebruik: kies-kernel A|B (nu: $(cat /boot/kernel-keuze 2>/dev/null || echo A))"; exit 1;; esac
+case "$k" in A|B|C) ;; *) echo "gebruik: kies-kernel A|B|C (nu: $(cat /boot/kernel-keuze 2>/dev/null || echo A))"; exit 1;; esac
 cp -f "uImage.$k" uImage; cp -f "uInitrd.$k" uInitrd; sync
 echo "$k" > /boot/kernel-keuze; sync
 # zram: A kent alleen LZO; B heeft LZ4 + ZSTD-hercompressie
 case "$k" in
   A) alg="lzo-rle" ;;
-  B) alg="lz4 zstd(level=3) (type=idle)" ;;
+  B|C) alg="lz4 zstd(level=3) (type=idle)" ;;
 esac
 sed -i "s/^compression-algorithm.*/compression-algorithm = $alg/" /etc/systemd/zram-generator.conf
 echo "Kernel $k gekozen (zram: $alg). Herstart met: reboot"

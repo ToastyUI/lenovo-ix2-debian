@@ -1,0 +1,8 @@
+[Unit]
+Description=Keep the LifeLine system array read-only
+After=mdadm-last-resort@.service local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ix2-lifeline-ro
+[Install]
+WantedBy=multi-user.target
