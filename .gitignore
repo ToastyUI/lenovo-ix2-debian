@@ -1,0 +1,6 @@
+*.deb
+*.tar*
+uImage*
+uInitrd*
+*.dtb
+.DS_Store

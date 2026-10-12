@@ -1,0 +1,79 @@
+# Back-up van de originele U-Boot-omgeving (stock LifeLine), Lenovo ix2 "IX2tb"
+# Uitgelezen op 2026-10-11 via SSH met: fw_printenv
+# BEWAREN: dit is de terugweg naar de originele firmware.
+# Hardware: Marvell Kirkwood 88F6282 A1, Feroceon 88FR131 (ARMv5TE), 256 MB RAM
+# Flash: alleen SPI (u-boot 0x7e000 + env + env2), kernel/initrd staan op de harde schijf
+# Stock kernel: Linux 2.6.31.8 (build 16-10-2018, v0.0.9)
+
+baudrate=115200
+loads_echo=0
+rootpath=/srv/ubuntu
+netmask=255.255.255.0
+run_diag=yes
+MALLOC_len=1
+ethprime=egiga0
+bootargs_end=:::DB88FXX81:eth0:none
+image_name=uImage
+standalone=fsload 0x2000000 $(image_name);setenv bootargs $(console) root=/dev/mtdblock0 rw ip=$(ipaddr):$(serverip)$(bootargs_end) $(mvPhoneConfig); bootm 0x2000000;
+lcd0_enable=0
+lcd0_params=640x480-16@60
+ethmtu=1500
+mvPhoneConfig=mv_phone_config=dev[0]:fxs,dev[1]:fxo
+mvNetConfig=<REDACTED>
+usb0Mode=host
+yuk_ethaddr=<REDACTED>
+netretry=no
+rcvrip=169.254.100.100
+loadaddr=0x02000000
+autoload=no
+image_multi=yes
+ethact=egiga0
+console=console=ttyS0,115200
+bootargs_root=root=/dev/ram0
+bootargs_mtd=mtdparts=spi_flash:0x7e000@0(u-boot),0x1000@0x7f000(env),0x1000@0x7e000(env2)
+kernelimage=zImage
+initrdimage=mfginitrd
+ipaddr=192.168.1.2
+mfgmodel=ix2
+preroot_ver=0.0.2
+pcieTune=no
+pcieTune1=no
+fw_ver=3.3.2.18857
+stdin=serial
+stdout=serial
+stderr=serial
+mainlineLinux=no
+enaMonExt=no
+enaCpuStream=no
+enaWrAllo=no
+pexMode=RC
+disL2Cache=no
+setL2CacheWT=yes
+disL2Prefetch=yes
+enaICPref=yes
+enaDCPref=yes
+sata_dma_mode=yes
+netbsd_en=no
+vxworks_en=no
+bootdelay=3
+disaMvPnp=no
+enaAutoRecovery=yes
+uboot_ver=0.0.8
+serial_number=<REDACTED>
+ethaddr=<REDACTED>
+serialNo=<REDACTED>
+modelname=31997201
+serialno=<REDACTED>
+runintime=10800
+ftpserver=192.168.43.4
+testfile=100M
+pre_path=IX2/1.0.3/download_runin.sh
+pre_path_conf=IX2/1.0.3/download_runin.conf
+pre_serverip=192.168.32.4
+pre_user=<REDACTED>
+pre_passwd=<REDACTED>
+pre_dirzi=IX2/1.0.3
+serverip=192.168.32.4
+mfgtest_state=final_tested_ok
+bootcmd=ide reset; ide read 0x40000 0x800 0x1800; ide read 0x900000 0x2000 0x2000; setenv bootargs $(console) $(bootargs_root) $(bootargs_mtd) $(bootargs_end); bootm 0x40000 0x900000;run bootcmd2
+bootcmd2=ide dev 1;ide read 0x40000 0x800 0x1800; ide read 0x900000 0x2000 0x2000; bootm 0x40000 0x900000;
