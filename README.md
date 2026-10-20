@@ -1,6 +1,6 @@
-# lenovo-ix2-debian
+# Lenovo ix2 Debian — community open-source upgrade
 
-Debian 13 (trixie) on a **Lenovo ix2 (ix2-ng)** NAS, booted from a USB stick, with a stock-firmware fallback.
+An independent community project providing build scripts, configuration examples and documentation to run Debian 13 (trixie) on a **Lenovo ix2 (ix2-ng)** NAS, booted from a USB stick, with a stock-firmware fallback.
 
 | | |
 |---|---|
@@ -20,10 +20,10 @@ bench/      fio scripts used for docs/benchmarks.md
 rootfs/     build.sh (debootstrap rootfs + kernel A), tune.sh / tune2.sh (performance tuning), add-kernel-b.sh, add-kernel-c-live.sh
 kernel/     build-kernel.sh (B), build-kernel-c.sh (C), full configs, config.diff (A -> B), config-B-to-C.diff
 uboot/      fw_setenv-usb-boot.sh (USB boot with fallback), redacted U-Boot environments
-config/     live configuration from the running ix2 (etc/, usr-local-sbin/)
+config/     sanitized configuration examples (etc/, usr-local-sbin/)
 ```
 
-Binary artifacts (kernel B `.deb`, `uImage`/`uInitrd` for A and B, DTB) are attached to the GitHub **Release**, not stored in git.
+Binary artifacts are attached to the GitHub **Release**, not stored in git. Historical initramfs files and Git history require a separate privacy review before public release; the sanitized source tree alone does not establish that those artifacts are safe to publish.
 
 ## Boot flow
 
@@ -37,4 +37,25 @@ Switch kernels on the ix2 with `kies-kernel A`, `B` or `C`, then `reboot`. C tra
 
 - Kernel sources: kernel.org, GPL-2.0. Kirkwood patch, base config and kernel A packages: **bodhi**, [forum.doozan.com](https://forum.doozan.com/read.php?2,12096) (GPL-2.0).
 - Debian packages: their respective licenses.
-- Scripts and documentation in this repository: private, all rights reserved.
+- Original project scripts and documentation: MIT, see [LICENSE](LICENSE). Upstream kernel configurations, patches, packages and other third-party material retain their original licenses; the MIT license does not relicense them.
+
+## Project status and getting started
+
+Maintained under the ToastyUI GitHub account. This is an experimental upgrade
+project for Lenovo ix2-ng hardware, not an official Lenovo firmware release.
+The existing benchmarks describe one development device, not guaranteed results.
+
+1. Read [the installation guide](docs/handleiding.md) and back up your data and original boot environment locally.
+2. Review the scripts before running them as root. Build in a disposable Linux environment.
+3. Supply your own SSH public key to the rootfs builder. Never publish private keys or personalized rootfs images.
+4. Replace documentation-only addresses (`192.0.2.0/24`), sample MACs and `nasuser` with your own settings. Benchmark scripts deliberately contain non-operational example addresses.
+5. Review [kernel options](docs/kernel-options.md). Kernel C reduces hardening and is a performance experiment, not a security upgrade.
+
+The LifeLine fallback only remains available while its original disk layout and
+system partitions remain intact. The guide's full-disk RAID recreation removes it.
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and [SECURITY.md](SECURITY.md)
+for reporting concerns. No CVE history, independent audit, adoption figures or
+formal security-maintainer appointment is claimed by this project.

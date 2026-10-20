@@ -1,49 +1,20 @@
 # Lenovo ix2 → Debian, als NFS-opslag voor Proxmox
 
-Handleiding voor jouw toestel: **Lenovo ix2 "IX2tb"** (ix2-ng), Marvell Kirkwood 88F6282, 256 MB RAM, stock U-Boot 0.0.8 in SPI-flash, 2 SATA-schijven.
+Handleiding voor jouw toestel: **Lenovo ix2 (ix2-ng)** (ix2-ng), Marvell Kirkwood 88F6282, 256 MB RAM, stock U-Boot 0.0.8 in SPI-flash, 2 SATA-schijven.
 
 **Doel:** een minimale Debian op een USB-stick, de twee schijven als RAID 1, en NFS (voor Proxmox en Immich) plus Samba (voor de Mac en telefoons, rechtstreeks op de ix2).
 
 ---
 
-## ⭐ Draaiboek: zo staat het nu (12-10-2026)
+## Gebruik van deze handleiding
 
-De stick is **al gemaakt** met een zelfgebouwd, minimaal systeem. **Sla fase 1, 2, 5.2 en 5.3 hieronder over**; die beschrijven de oude route.
-
-**Wat er op de stick staat (SanDisk 14 GB, zit nu in Proxmox):**
-
-| | |
-|---|---|
-| Systeem | Debian 13 "trixie" armel, minimaal (± 310 MB) |
-| Kernel | 7.1.9-kirkwood-tld-1 (bodhi), met DTB `kirkwood-lenovo-ix2-ng` |
-| Partities | `BOOT` ext2 256 MB (`uImage`, `uInitrd`), `rootfs` ext4 |
-| Netwerk | DHCP op elke ethernetpoort (systemd-networkd), hostnaam `ix2` |
-| Inloggen | **Alleen root met SSH-sleutel** (`~/.ssh/proxmox_claude`); geen wachtwoord |
-| Al ingericht | `fw_printenv`/`fw_setenv` (`/etc/fw_env.config`: mtd2 + mtd1), NFS-server, mdadm, smartmontools, nftables, automatische updates |
-| Nog te installeren | Samba (na de eerste boot) |
-
-**Stappen:**
-
-1. **Wissen klaar** → de ix2 start opnieuw op in LifeLine (met fabrieksinstellingen).
-2. **In de webinterface** (`https://192.168.20.100`, of zoek het nieuwe IP): stel het beheerderswachtwoord in, en zet **SSH** aan via **Support Diagnostics** (`/diagnostics.html`).
-3. **Inloggen in LifeLine:** `ssh root@192.168.20.100`, met wachtwoord `soho` + je beheerderswachtwoord.
-4. **Controleren** of de originele bootregel er nog staat: `fw_printenv bootcmd`. Moet gelijk zijn aan `~/Downloads/ix2-fw_printenv-backup.txt`.
-5. **Bootvariabelen zetten:** de 7 regels uit **fase 3.2**, **één voor één**. Daarna `fw_printenv bootcmd bootcmd_stock` ter controle.
-6. **De ix2 uitzetten** (`poweroff`). De **stick van Proxmox naar de USB-poort van de ix2** (er is maar één USB-poort, en die kan U-Boot lezen). Weer aanzetten.
-7. **2–3 minuten wachten.** Dan zoekt Claude de ix2 op het netwerk en logt in met de sleutel. Zelf kan het ook:
-   ```bash
-   ssh -i ~/.ssh/proxmox_claude root@<ip-van-de-ix2>
-   ```
-8. **Start hij toch LifeLine?** Dan las U-Boot de stick niet. Niets aan de hand: zie "Problemen oplossen".
-9. **Daarna:** schijven controleren en RAID 1 (fase 6), NFS (fase 7), Samba, en snelheid meten.
-
-**Netwerk rond de ix2:** zt-malta (CT 101, 192.168.20.104) is de ZeroTier-gateway en laat telefoons **alleen naar 192.168.20.100** door. Geef de ix2 in OPNsense dus een **vaste DHCP-toewijzing op 192.168.20.100** (MAC `00:D0:B8:1D:EC:6F`).
-
----
-
-> **Belangrijk.** Dit is community-werk voor end-of-life-hardware. Lees elke stap eerst helemaal, en voer pas uit als je hem begrijpt. Je back-up van de originele bootinstellingen staat in `~/Downloads/ix2-fw_printenv-backup.txt`. Bewaar die.
->
-> Levensduur: Debian 13 (trixie) is de laatste Debian-versie voor deze processor (armel). Reken op beveiligingsupdates tot ongeveer 2028.
+Community-handleiding voor de Lenovo ix2-ng; geen officieel Lenovo-product.
+Alle adressen in `192.0.2.0/24`, MAC-adressen en gebruikersnamen zijn voorbeelden.
+Vervang ze door je eigen gegevens. Dit document combineert historische
+installatieroutes; lees eerst de README en kies één route. Voer geen wis- of
+partitioneercommando's uit op schijven met gegevens die je wilt bewaren.
+Bewaar een eigen `fw_printenv`-back-up buiten deze repository.
+Controleer actuele Debian- en kernelondersteuning bij de genoemde upstreambronnen.
 
 ---
 
@@ -58,7 +29,7 @@ De stick is **al gemaakt** met een zelfgebouwd, minimaal systeem. **Sla fase 1, 
 **Controleer eerst**
 - [ ] Het secure erase is **100% klaar** en de NAS staat weer normaal aan
 - [ ] Het label onder de NAS: noteer model en onderdeelnummer
-- [ ] `~/Downloads/ix2-fw_printenv-backup.txt` bestaat
+- [ ] `~/ix2-private-backup/fw_printenv.txt` bestaat
 
 **Waarom deze volgorde veilig is**
 We passen **alleen bootvariabelen** aan, niet U-Boot zelf. De bootvolgorde wordt: **eerst de USB-stick, anders de originele firmware van de schijf**. Pas als Debian goed werkt, nemen we de schijven in gebruik.
@@ -174,7 +145,7 @@ EOF
 cat /mnt/ix2root/etc/network/interfaces    # standaard DHCP op eth0, dat is goed
 ```
 
-Het IP regel je met een **DHCP-reservering in OPNsense** op MAC-adres **`00:D0:B8:1D:EC:6F`**, voor bijvoorbeeld `192.168.20.100`.
+Het IP regel je met een **DHCP-reservering in OPNsense** op MAC-adres **`02:00:00:00:00:01`**, voor bijvoorbeeld `192.0.2.100`.
 
 ### 2.6 Afronden
 
@@ -194,7 +165,7 @@ Haal de stick eruit.
 Log in via SSH op de ix2 (LifeLine draait nog):
 
 ```bash
-ssh root@192.168.20.100
+ssh root@192.0.2.100
 ```
 
 ### 3.1 Controleer de back-up nog één keer
@@ -240,13 +211,13 @@ fw_printenv bootcmd bootcmd_stock usb_bootcmd usb_boot load_uimage load_uinitrd 
 4. Zoek het IP-adres (DHCP-lease in OPNsense, of vanaf je Mac):
 
 ```bash
-arp -a | grep -i "0:d0:b8:1d:ec:6f"
+arp -a | grep -i "02:00:00:00:00:01"
 ```
 
 5. Inloggen: op de zelfgebouwde stick **alleen met de SSH-sleutel** (geen wachtwoord). (Bij de rootfs van bodhi was het `root` / `root`.)
 
 ```bash
-ssh -i ~/.ssh/proxmox_claude root@192.168.20.100
+ssh -i ~/.ssh/id_ed25519 root@192.0.2.100
 ```
 
 6. Controleren of je in Debian zit:
@@ -266,15 +237,15 @@ cat /etc/debian_version
 
 ```bash
 passwd                                  # nieuw, sterk root-wachtwoord
-adduser diego                           # eigen gebruiker
+adduser nasuser                           # eigen gebruiker
 apt update && apt install -y sudo
-usermod -aG sudo diego
+usermod -aG sudo nasuser
 ```
 
 Zet je SSH-sleutel erop (vanaf de Mac):
 
 ```bash
-ssh-copy-id diego@192.168.20.100
+ssh-copy-id nasuser@192.0.2.100
 ```
 
 Daarna inloggen met een wachtwoord en als root uitschakelen:
@@ -303,7 +274,7 @@ Test met `fw_printenv`. Je moet dezelfde waarden zien als in je back-up. Zie de 
 
 ### 5.3 Upgraden naar Debian 13 (trixie)
 
-Bookworm krijgt voor armel geen beveiligingsupdates meer. Trixie is de laatste armel-release.
+Controleer vóór een distributie-upgrade de actuele armel-ondersteuning en beveiligingsstatus bij Debian.
 
 ```bash
 apt update && apt full-upgrade -y
@@ -427,7 +398,7 @@ systemctl enable --now nftables
 
 Proxmox-webinterface → **Datacenter → Storage → Add → NFS**:
 - **ID:** `ix2`
-- **Server:** `192.168.20.100`
+- **Server:** `192.0.2.100`
 - **Export:** `/srv/nas` (verschijnt in de lijst)
 - **Content:** `VZDump backup file`, `ISO image`, `Container template`
 - **Niet** gebruiken voor VM-schijven (te traag en te kwetsbaar)
@@ -455,15 +426,15 @@ Proxmox → **Datacenter → Backup → Add**: Storage `ix2`, Mode `Snapshot`, e
 
 ## Fase 9: OPNsense-regels
 
-Op de interface of het VLAN van de NAS (192.168.20.0/24):
+Op de interface of het VLAN van de NAS (192.0.2.0/24):
 
 | # | Actie | Bron | Doel | Poort | Waarom |
 |---|---|---|---|---|---|
-| 1 | Toestaan | Proxmox-IP | 192.168.20.100 | TCP/UDP 111, 2049 | NFS |
-| 2 | Toestaan | Mac-IP, Proxmox-IP | 192.168.20.100 | TCP 22 | Beheer |
-| 3 | Toestaan | 192.168.20.100 | Debian-mirrors (alias) | TCP 80, 443 | Updates |
-| 4 | Toestaan | 192.168.20.100 | OPNsense | UDP 53, 123 | DNS en tijd |
-| 5 | **Blokkeren** | 192.168.20.100 | any | any | Verder geen internet |
+| 1 | Toestaan | Proxmox-IP | 192.0.2.100 | TCP/UDP 111, 2049 | NFS |
+| 2 | Toestaan | Mac-IP, Proxmox-IP | 192.0.2.100 | TCP 22 | Beheer |
+| 3 | Toestaan | 192.0.2.100 | Debian-mirrors (alias) | TCP 80, 443 | Updates |
+| 4 | Toestaan | 192.0.2.100 | OPNsense | UDP 53, 123 | DNS en tijd |
+| 5 | **Blokkeren** | 192.0.2.100 | any | any | Verder geen internet |
 
 Plus: geen port forwards naar de ix2, en **UPnP uit**.
 
@@ -475,7 +446,7 @@ Plus: geen port forwards naar de ix2, en **UPnP uit**.
 |---|---|
 | ix2 start **LifeLine** in plaats van Debian | U-Boot kon de stick niet lezen. Probeer een andere (kleinere) stick, de andere USB-poort, of formatteer BOOT opnieuw met `mkfs.ext2 -I 128 -L BOOT` en zet `uImage`/`uInitrd` terug |
 | Hangt bij "Starting kernel…" (alleen zichtbaar met een seriële kabel) | **Verkeerde device tree.** Controleer dat `kirkwood-lenovo-ix2-ng.dtb` is aangehangen (stap 2.4). Helpt dat niet, kijk dan in de doozan-HOWTO naar `mainlineLinux`/`arcNumber` (de ix2-dl-handleiding gebruikt `mainlineLinux=yes`, `arcNumber=1682`) |
-| Geen netwerk na boot | Controleer de DHCP-lease in OPNsense op MAC `00:D0:B8:1D:EC:6F`; de interface heet `eth0` |
+| Geen netwerk na boot | Controleer de DHCP-lease in OPNsense op MAC `02:00:00:00:00:01`; de interface heet `eth0` |
 | RAID niet gevonden na reboot | `uInitrd` niet opnieuw gemaakt na `update-initramfs` (zie 6.2) |
 | Alles mislukt | Trek de stick eruit en zet de ix2 aan. Zolang de schijven niet zijn omgezet (fase 6), start LifeLine gewoon. Of zet terug met `fw_setenv bootcmd '…'` uit je back-upbestand |
 
@@ -490,7 +461,7 @@ fw_setenv bootcmd 'ide reset; ide read 0x40000 0x800 0x1800; ide read 0x900000 0
 ## Wat je realistisch mag verwachten
 
 - **Snelheid:** ongeveer 30–70 MB/s via NFS (CPU, 1 GbE en oude schijven). Prima voor back-ups, ISO's en bestanden; niet voor VM-schijven.
-- **Levensduur:** updates tot ongeveer 2028. Plan daarna een vervanger, of hang de schijven direct in de Proxmox-host.
+- **Levensduur:** afhankelijk van de actuele ondersteuning van Debian en de gebruikte kernel. Plan daarna een vervanger, of hang de schijven direct in de Proxmox-host.
 
 ## Bronnen
 

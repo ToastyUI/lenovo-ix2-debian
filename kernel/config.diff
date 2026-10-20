@@ -1,5 +1,5 @@
---- /Users/diego/Downloads/lenovo-ix2-debian/kernel/config-7.1.9-kirkwood-tld-1-bodhi	2026-10-12 09:57:49
-+++ /Users/diego/Downloads/lenovo-ix2-debian/kernel/config-7.1.9-ix2perf-1	2026-10-12 09:57:49
+--- kernel/config-7.1.9-kirkwood-tld-1-bodhi	2026-10-12 09:57:49
++++ kernel/config-7.1.9-ix2perf-1	2026-10-12 09:57:49
 @@ -2,7 +2,7 @@
  # Automatically generated file; DO NOT EDIT.
  # Linux/arm 7.1.9 Kernel Configuration

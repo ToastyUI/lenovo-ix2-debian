@@ -2,10 +2,10 @@
 # Installeert kernel C (7.1.9-ix2c-1) op de draaiende ix2 (stick in de NAS), vanaf een machine
 # die Proxmox (bouwhost, u-boot-tools) en via Proxmox de ix2 bereikt. Wisselen: kies-kernel C; reboot
 set -euo pipefail
-KEY=~/.ssh/proxmox_claude; KH=${KH:-$HOME/.ssh/known_hosts_ix2}; C=7.1.9-ix2c-1; O=/root/ix2/kc/out
-PVE() { ssh -i $KEY -o BatchMode=yes root@192.168.3.2 "$@"; }
+KEY=~/.ssh/id_ed25519; KH=${KH:-$HOME/.ssh/known_hosts_ix2}; C=7.1.9-ix2c-1; O=/root/ix2/kc/out
+PVE() { ssh -i $KEY -o BatchMode=yes root@192.0.2.2 "$@"; }
 IX2() { ssh -i $KEY -o BatchMode=yes -o UserKnownHostsFile=$KH \
-        -o "ProxyCommand=ssh -i $KEY -o BatchMode=yes -W %h:%p root@192.168.3.2" root@192.168.20.100 "$@"; }
+        -o "ProxyCommand=ssh -i $KEY -o BatchMode=yes -W %h:%p root@192.0.2.2" root@192.0.2.100 "$@"; }
 echo "[1/4] pakket + DTB naar de ix2"
 PVE "cat $O/linux-image-${C}_1_armel.deb" | IX2 "cat > /tmp/k.deb"
 PVE "cat $O/kirkwood-lenovo-ix2-ng.dtb"   | IX2 "cat > /boot/dts/kirkwood-lenovo-ix2-ng.ix2c.dtb"

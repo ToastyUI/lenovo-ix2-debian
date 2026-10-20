@@ -26,7 +26,7 @@ bootargs_root=root=/dev/ram0
 bootargs_mtd=mtdparts=spi_flash:0x7e000@0(u-boot),0x1000@0x7f000(env),0x1000@0x7e000(env2)
 kernelimage=zImage
 initrdimage=mfginitrd
-ipaddr=192.168.1.2
+ipaddr=192.0.2.10
 mfgmodel=ix2
 preroot_ver=0.0.2
 pcieTune=no
@@ -58,15 +58,15 @@ serialNo=<REDACTED>
 modelname=31997201
 serialno=<REDACTED>
 runintime=10800
-ftpserver=192.168.43.4
+ftpserver=192.0.2.10
 testfile=100M
 pre_path=IX2/1.0.3/download_runin.sh
 pre_path_conf=IX2/1.0.3/download_runin.conf
-pre_serverip=192.168.32.4
+pre_serverip=192.0.2.10
 pre_user=<REDACTED>
 pre_passwd=<REDACTED>
 pre_dirzi=IX2/1.0.3
-serverip=192.168.32.4
+serverip=192.0.2.10
 mfgtest_state=final_tested_ok
 bootcmd2=ide dev 1;ide read 0x40000 0x800 0x1800; ide read 0x900000 0x2000 0x2000; bootm 0x40000 0x900000;
 bootcmd_stock=ide reset; ide read 0x40000 0x800 0x1800; ide read 0x900000 0x2000 0x2000; setenv bootargs $(console) $(bootargs_root) $(bootargs_mtd) $(bootargs_end); bootm 0x40000 0x900000; run bootcmd2
