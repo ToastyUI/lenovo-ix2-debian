@@ -51,11 +51,17 @@ The existing benchmarks describe one development device, not guaranteed results.
 4. Replace documentation-only addresses (`192.0.2.0/24`), sample MACs and `nasuser` with your own settings. Benchmark scripts deliberately contain non-operational example addresses.
 5. Review [kernel options](docs/kernel-options.md). Kernel C reduces hardening and is a performance experiment, not a security upgrade.
 
+Debian runs from the USB stick; the internal LifeLine system stays on the SATA disks.
 The LifeLine fallback only remains available while its original disk layout and
-system partitions remain intact. The guide's full-disk RAID recreation removes it.
+system partitions remain intact. The installation guide preserves those partitions and does not recreate the internal RAID.
 
 ## Contributing and security
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and [SECURITY.md](SECURITY.md)
 for reporting concerns. No CVE history, independent audit, adoption figures or
 formal security-maintainer appointment is claimed by this project.
+
+LifeLine SSH (enabled through `/diagnostics.html`): user `root`, password `soho`
+immediately followed by the administrator password set by the user, with no space,
+on the firmware used by this project. Debian on USB instead uses your SSH key.
+See the [step-by-step guide](docs/handleiding.md) for setup and rollback.
