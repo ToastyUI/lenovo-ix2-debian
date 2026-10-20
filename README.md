@@ -65,3 +65,31 @@ LifeLine SSH (enabled through `/diagnostics.html`): user `root`, password `soho`
 immediately followed by the administrator password set by the user, with no space,
 on the firmware used by this project. Debian on USB instead uses your SSH key.
 See the [step-by-step guide](docs/handleiding.md) for setup and rollback.
+
+## RAID monitoring, LEDs, disk idle and mail
+
+See [monitoring setup](docs/monitoring.md) for existing RAID preservation, the
+LED service, 20-minute disk idle and Gmail-backed mdadm warnings. Sanitized
+configuration templates are included; provide credentials only on your NAS.
+The development chat records successful Gmail SMTP acceptance on 2026-10-14.
+This is not a newly executed hardware or mail test. Proxmox uplink watchdogs are
+outside this NAS project's scope.
+
+## Measured performance
+
+Historical measurements on one ix2, not guaranteed results:
+
+| Test | Result |
+|---|---|
+| Gigabit network | 929–941 Mbit/s |
+| Local sequential disk read / write (kernel A) | 149 / 121 MiB/s |
+| NFS sequential read, kernel A / B / C | 69.9 / 79.0 / 106.9 MiB/s |
+| NFS sequential read, C with 16 server threads | 108.2 MiB/s |
+| NFS app write, C with 16 server threads | 41.5 MiB/s |
+| Cold NFS random 4K read, C with 16 threads | 620 IOPS |
+
+[Full benchmarks and methodology](docs/benchmarks.md) include local fio, NFS,
+network throughput, memory pressure, zram and runtime tuning. Earlier NFS random
+read comparisons were cache-biased; use the corrected cold-cache results.
+Kernel C sacrifices hardening; these results are not a recommendation to disable
+protections. SMB comparisons remain unmeasured in the published results.

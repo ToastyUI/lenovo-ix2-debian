@@ -1,0 +1,3 @@
+# Example: confirm the SATA disk names with lsblk before enabling.
+START_HD_IDLE=true
+HD_IDLE_OPTS="-i 0 -a sda -i 1200 -a sdb -i 1200"

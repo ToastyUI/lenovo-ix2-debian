@@ -15,3 +15,8 @@ known_hosts*
 *fw_printenv-backup*
 rootfs-image/
 private/
+
+# Personalized mail configuration and credentials
+msmtprc
+gmail-app-password
+ix2-secrets/

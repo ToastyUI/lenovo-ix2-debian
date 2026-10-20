@@ -1,5 +1,11 @@
 # Benchmarks
 
+Historical development measurements from 2026-10-12 on one device. These tests
+have not been rerun for this documentation update. Kernel C has reduced hardening.
+The later Kernel C section supersedes earlier statements that B was the default.
+Earlier NFS random 4K figures are cache-biased and must not be used as a kernel
+comparison; see the corrected cold-cache section.
+
 Lenovo ix2 (88F6282, 256 MB), 2× WD Red WD20EFRX 2 TB in md RAID 1 (internal bitmap), ext4 `fast_commit`, Debian 13.
 Client: LXC container on Proxmox in the same L2 network (`vmbr2`), 1 GbE.
 fio: 2 GB test file (larger than RAM), libaio.

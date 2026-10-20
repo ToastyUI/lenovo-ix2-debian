@@ -182,6 +182,9 @@ kernel wordt niet automatisch bijgewerkt door Debian. Test kernelwissels via de
 USB-stick en behoud een werkende kopie. Testscripts in `bench/` wijzigen exports,
 routes en mounts en zijn bedoeld voor een geïsoleerde testomgeving.
 
+Voor de volgende stap: [RAID-bewaking, leds, schijfrust en Gmail](monitoring.md).
+Voor gemeten prestaties en testbeperkingen: [benchmarks](benchmarks.md).
+
 ## 9. Terug naar LifeLine
 
 1. Sluit Debian netjes af met `poweroff` en wacht tot de NAS uit staat.
