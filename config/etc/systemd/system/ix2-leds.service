@@ -1,0 +1,9 @@
+[Unit]
+Description=LED-triggers Lenovo ix2 (HDD-activiteit, systeem, RAID-fout)
+After=systemd-udev-settle.service mdadm-raid.service local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ix2-leds
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

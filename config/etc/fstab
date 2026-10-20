@@ -1,0 +1,4 @@
+LABEL=rootfs  /      ext4  defaults,noatime,commit=60  0 1
+LABEL=BOOT    /boot  ext2  defaults,noatime            0 2
+tmpfs         /tmp   tmpfs defaults,size=32m           0 0
+LABEL=nasdata  /srv/nas  ext4  noatime,commit=30,nofail,x-systemd.device-timeout=30s  0 2

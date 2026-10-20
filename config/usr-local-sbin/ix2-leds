@@ -1,0 +1,7 @@
+#!/bin/sh
+# LED-triggers van de Lenovo ix2 instellen.
+L=/sys/class/leds
+echo disk-activity > "$L/ix2:blue:hdd/trigger"
+echo default-on    > "$L/ix2:white:sys/trigger"
+echo panic         > "$L/ix2:red:sys/trigger"
+/usr/local/sbin/ix2-md-led

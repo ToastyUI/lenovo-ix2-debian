@@ -1,0 +1,8 @@
+#!/bin/sh
+# Zet het LifeLine-systeemarray (md, metadata 0.90) alleen-lezen, zodat de LifeLine-fallback intact blijft.
+for m in /sys/block/md*/md; do
+  [ "$(cat $m/metadata_version 2>/dev/null)" = "0.90" ] || continue
+  d=/dev/$(basename "$(dirname "$m")")
+  findmnt -S "$d" >/dev/null && continue
+  [ "$(cat $m/array_state)" = readonly ] || mdadm --readonly "$d" && echo "$d alleen-lezen"
+done

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Rode schijf-LED aan als die schijf in een RAID ontbreekt of als defect (F) gemarkeerd is.
+# Wordt aangeroepen door mdadm --monitor (PROGRAM) en bij het opstarten. sda = hdd1, sdb = hdd2.
+for pair in sda:1 sdb:2; do
+  d=${pair%:*}; n=${pair#*:}; led=/sys/class/leds/ix2:red:hdd$n/brightness
+  if grep -qE "${d}[0-9]+\[[0-9]+\]\(F\)" /proc/mdstat || ! grep -qE "${d}[0-9]+\[[0-9]+\]" /proc/mdstat; then
+    echo 1 > "$led"
+  else
+    echo 0 > "$led"
+  fi
+done

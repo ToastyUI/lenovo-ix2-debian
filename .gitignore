@@ -1,0 +1,17 @@
+*.deb
+*.tar*
+uImage*
+uInitrd*
+*.dtb
+.DS_Store
+
+# Local secrets and device state
+.env
+.env.*
+*.pem
+*.key
+authorized_keys
+known_hosts*
+*fw_printenv-backup*
+rootfs-image/
+private/
