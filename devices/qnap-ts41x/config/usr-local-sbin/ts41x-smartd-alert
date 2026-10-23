@@ -1,0 +1,3 @@
+#!/bin/sh
+# smartd -M exec hook: forward the warning to ts41x-alert.
+exec /usr/local/sbin/ts41x-alert "${SMARTD_SUBJECT:-SMART warning}" "${SMARTD_FULLMESSAGE:-$SMARTD_MESSAGE}"

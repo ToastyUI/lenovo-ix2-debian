@@ -1,0 +1,8 @@
+# Only assemble the arrays listed here. With MODE=qts this keeps QTS's own system arrays
+# (md9, md13, md256, md322) untouched, so the QTS fallback stays intact.
+AUTO -all
+HOMEHOST <ignore>
+MAILADDR root
+PROGRAM /usr/local/sbin/ts41x-md-led
+# Add the data array(s) on the NAS with:  mdadm --detail --scan | grep -v -E 'md(9|13|256|322) '
+# ARRAY /dev/md1 metadata=1.0 UUID=...

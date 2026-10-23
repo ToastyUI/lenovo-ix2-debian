@@ -20,3 +20,6 @@ private/
 msmtprc
 gmail-app-password
 ix2-secrets/
+
+# Python bytecode
+__pycache__/

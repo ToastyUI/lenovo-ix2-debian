@@ -1,0 +1,83 @@
+# id	dtb	model	family	mcu	status	notes
+kirkwood-4i-edge-200	kirkwood-4i-edge-200.dtb	Endian 4i Edge 200	router/appliance	-	untested	
+kirkwood-b3	kirkwood-b3.dtb	Excito B3	plug/nas	-	untested	
+kirkwood-blackarmor-nas220	kirkwood-blackarmor-nas220.dtb	Seagate Blackarmor NAS220	plug/nas	-	untested	
+kirkwood-c200-v1	kirkwood-c200-v1.dtb	Ctera C200 V1	plug/nas	-	untested	
+kirkwood-cloudbox	kirkwood-cloudbox.dtb	LaCie CloudBox	lacie	-	untested	
+kirkwood-d2net	kirkwood-d2net.dtb	LaCie d2 Network v2	lacie	-	untested	
+kirkwood-db-88f6281	kirkwood-db-88f6281.dtb	Marvell DB-88F6281-BP Development Board	dev-board	-	untested	
+kirkwood-db-88f6282	kirkwood-db-88f6282.dtb	Marvell DB-88F6282-BP Development Board	dev-board	-	untested	
+kirkwood-dir665	kirkwood-dir665.dtb	D-Link DIR-665	router/appliance	-	untested	
+kirkwood-dns320	kirkwood-dns320.dtb	D-Link DNS-320 NAS (Rev A1)	plug/nas	-	untested	
+kirkwood-dns325	kirkwood-dns325.dtb	D-Link DNS-325 NAS (Rev A1)	plug/nas	-	untested	
+kirkwood-dockstar	kirkwood-dockstar.dtb	Seagate FreeAgent Dockstar	plug/nas	-	untested	
+kirkwood-dreamplug	kirkwood-dreamplug.dtb	Globalscale Technologies Dreamplug	plug/nas	-	untested	
+kirkwood-ds109	kirkwood-ds109.dtb	Synology DS109, DS110, DS110jv20	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds110jv10	kirkwood-ds110jv10.dtb	Synology DS110j v10 and v30	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds111	kirkwood-ds111.dtb	Synology DS111	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds112	kirkwood-ds112.dtb	Synology DS112	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds209	kirkwood-ds209.dtb	Synology DS209	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds210	kirkwood-ds210.dtb	Synology DS210 v10, v20, v30, DS211j	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds212	kirkwood-ds212.dtb	Synology DS212, DS212p v10, v20, DS213air v10, DS213 v10	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds212j	kirkwood-ds212j.dtb	Synology DS212j v10, v20	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds409	kirkwood-ds409.dtb	Synology DS409, DS410j	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds409slim	kirkwood-ds409slim.dtb	Synology 409slim	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds411	kirkwood-ds411.dtb	Synology DS411, DS413jv10	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds411j	kirkwood-ds411j.dtb	Synology DS411j	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-ds411slim	kirkwood-ds411slim.dtb	Synology DS411slim	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-goflexnet	kirkwood-goflexnet.dtb	Seagate GoFlex Net	plug/nas	-	untested	
+kirkwood-guruplug-server-plus	kirkwood-guruplug-server-plus.dtb	Globalscale Technologies Guruplug Server Plus	plug/nas	-	untested	
+kirkwood-ib62x0	kirkwood-ib62x0.dtb	RaidSonic ICY BOX IB-NAS62x0 (Rev B)	plug/nas	-	untested	
+kirkwood-iconnect	kirkwood-iconnect.dtb	Iomega Iconnect	plug/nas	-	untested	
+kirkwood-iomega_ix2_200	kirkwood-iomega_ix2_200.dtb	Iomega StorCenter ix2-200	plug/nas	-	untested	
+kirkwood-is2	kirkwood-is2.dtb	LaCie Internet Space v2	lacie	-	untested	
+kirkwood-km_fixedeth	kirkwood-km_fixedeth.dtb	Keymile Kirkwood Fixed Eth	dev-board	-	untested	
+kirkwood-km_kirkwood	kirkwood-km_kirkwood.dtb	Keymile Kirkwood Reference Design	dev-board	-	untested	
+kirkwood-l-50	kirkwood-l-50.dtb	Check Point L-50	router/appliance	-	untested	
+kirkwood-laplug	kirkwood-laplug.dtb	LaCie LaPlug	lacie	-	untested	
+kirkwood-linkstation-lsqvl	kirkwood-linkstation-lsqvl.dtb	Buffalo Linkstation LS-QVL	buffalo	-	untested	
+kirkwood-linkstation-lsvl	kirkwood-linkstation-lsvl.dtb	Buffalo Linkstation LS-VL	buffalo	-	untested	
+kirkwood-linkstation-lswsxl	kirkwood-linkstation-lswsxl.dtb	Buffalo Linkstation LS-WSXL	buffalo	-	untested	
+kirkwood-linkstation-lswvl	kirkwood-linkstation-lswvl.dtb	Buffalo Linkstation LS-WVL	buffalo	-	untested	
+kirkwood-linkstation-lswxl	kirkwood-linkstation-lswxl.dtb	Buffalo Linkstation LS-WXL	buffalo	-	untested	
+kirkwood-linksys-viper	kirkwood-linksys-viper.dtb	Linksys Viper (E4200v2 / EA4500)	router/appliance	-	untested	
+kirkwood-lschlv2	kirkwood-lschlv2.dtb	Buffalo Linkstation LS-CHLv2	buffalo	-	untested	
+kirkwood-lsxhl	kirkwood-lsxhl.dtb	Buffalo Linkstation LS-XHL	buffalo	-	untested	
+kirkwood-mplcec4	kirkwood-mplcec4.dtb	MPL CEC4	dev-board	-	untested	
+kirkwood-mv88f6281gtw-ge	kirkwood-mv88f6281gtw-ge.dtb	Marvell 88F6281 GTW GE Board	dev-board	-	untested	
+kirkwood-nas2big	kirkwood-nas2big.dtb	LaCie 2Big NAS	lacie	-	untested	
+kirkwood-net2big	kirkwood-net2big.dtb	LaCie 2Big Network v2	lacie	-	untested	
+kirkwood-net5big	kirkwood-net5big.dtb	LaCie 5Big Network v2	lacie	-	untested	
+kirkwood-netgear_readynas_duo_v2	kirkwood-netgear_readynas_duo_v2.dtb	NETGEAR ReadyNAS Duo v2	plug/nas	-	untested	
+kirkwood-netgear_readynas_nv+_v2	kirkwood-netgear_readynas_nv+_v2.dtb	NETGEAR ReadyNAS NV+ v2	plug/nas	-	untested	
+kirkwood-ns2	kirkwood-ns2.dtb	LaCie Network Space v2	lacie	-	untested	
+kirkwood-ns2lite	kirkwood-ns2lite.dtb	LaCie Network Space Lite v2	lacie	-	untested	
+kirkwood-ns2max	kirkwood-ns2max.dtb	LaCie Network Space Max v2	lacie	-	untested	
+kirkwood-ns2mini	kirkwood-ns2mini.dtb	LaCie Network Space Mini v2	lacie	-	untested	
+kirkwood-nsa310	kirkwood-nsa310.dtb	ZyXEL NSA310	zyxel	-	untested	
+kirkwood-nsa310a	kirkwood-nsa310a.dtb	ZyXEL NSA310	zyxel	-	untested	
+kirkwood-nsa310s	kirkwood-nsa310s.dtb	ZyXEL NSA310S	zyxel	-	untested	
+kirkwood-nsa320	kirkwood-nsa320.dtb	Zyxel NSA320	zyxel	-	untested	
+kirkwood-nsa325	kirkwood-nsa325.dtb	ZyXEL NSA325	zyxel	-	untested	
+kirkwood-openblocks_a6	kirkwood-openblocks_a6.dtb	Plat'Home OpenBlocksA6	router/appliance	-	untested	
+kirkwood-openblocks_a7	kirkwood-openblocks_a7.dtb	Plat'Home OpenBlocksA7	router/appliance	-	untested	
+kirkwood-openrd-base	kirkwood-openrd-base.dtb	OpenRD Base	plug/nas	-	untested	
+kirkwood-openrd-client	kirkwood-openrd-client.dtb	OpenRD Client	plug/nas	-	untested	
+kirkwood-openrd-ultimate	kirkwood-openrd-ultimate.dtb	OpenRD Ultimate	plug/nas	-	untested	
+kirkwood-pogo_e02	kirkwood-pogo_e02.dtb	Cloud Engines Pogoplug E02	plug/nas	-	untested	
+kirkwood-pogoplug-series-4	kirkwood-pogoplug-series-4.dtb	Cloud Engines PogoPlug Series 4	plug/nas	-	untested	
+kirkwood-rd88f6192	kirkwood-rd88f6192.dtb	Marvell RD88F6192 reference design	dev-board	-	untested	
+kirkwood-rd88f6281-a	kirkwood-rd88f6281-a.dtb	Marvell RD88f6281 Reference design, with A0 or higher SoC	dev-board	-	untested	
+kirkwood-rd88f6281-z0	kirkwood-rd88f6281-z0.dtb	Marvell RD88f6281 Reference design, with Z0 SoC	dev-board	-	untested	
+kirkwood-rs212	kirkwood-rs212.dtb	Synology RS212	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-rs409	kirkwood-rs409.dtb	Synology RS409	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-rs411	kirkwood-rs411.dtb	Synology RS411 RS812	synology	synology-mcu ttyS1 9600	untested	
+kirkwood-sheevaplug-esata	kirkwood-sheevaplug-esata.dtb	Globalscale Technologies eSATA SheevaPlug	plug/nas	-	untested	
+kirkwood-sheevaplug	kirkwood-sheevaplug.dtb	Globalscale Technologies SheevaPlug	plug/nas	-	untested	
+kirkwood-t5325	kirkwood-t5325.dtb	HP t5325 Thin Client	plug/nas	-	untested	
+kirkwood-topkick	kirkwood-topkick.dtb	Universal Scientific Industrial Co. Topkick-1281P2	dev-board	-	untested	
+kirkwood-ts219-6281	kirkwood-ts219-6281.dtb	QNAP TS219 family	qnap	qnap-pic ttyS1 19200	kit should apply (untested)	TS-11x/21x/22x: same PIC; set DTB in /etc/ts41x/boot.conf
+kirkwood-ts219-6282	kirkwood-ts219-6282.dtb	QNAP TS219 family	qnap	qnap-pic ttyS1 19200	kit should apply (untested)	TS-11x/21x/22x: same PIC; set DTB in /etc/ts41x/boot.conf
+kirkwood-ts419-6281	kirkwood-ts419-6281.dtb	QNAP TS419 family	qnap	qnap-pic ttyS1 19200	kit: devices/qnap-ts41x (simulated, not yet on hardware)	TS-410/412/419P/419U
+kirkwood-ts419-6282	kirkwood-ts419-6282.dtb	QNAP TS419 family	qnap	qnap-pic ttyS1 19200	kit should apply (untested)	TS-419P II/U+ (88F6282)
+lenovo-ix2-ng	kirkwood-lenovo-ix2-ng.dtb (bodhi patch, not mainline)	Lenovo/Iomega ix2-ng	lenovo	- (GPIO LEDs)	tested on hardware: top-level README	USB boot via fw_setenv, LifeLine fallback

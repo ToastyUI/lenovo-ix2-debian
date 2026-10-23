@@ -1,0 +1,21 @@
+{
+    "download-dir": "/srv/data/Downloads",
+    "incomplete-dir": "/srv/data/Downloads/.incomplete",
+    "incomplete-dir-enabled": true,
+    "watch-dir": "/srv/data/Downloads/torrents",
+    "watch-dir-enabled": true,
+    "umask": "002",
+    "rpc-bind-address": "0.0.0.0",
+    "rpc-whitelist-enabled": true,
+    "rpc-whitelist": "127.0.0.1,192.168.*.*",
+    "rpc-host-whitelist-enabled": false,
+    "rpc-authentication-required": true,
+    "rpc-username": "CHANGE_ME",
+    "rpc-password": "CHANGE_ME (plain text here, transmission hashes it on start)",
+    "peer-port": 51413,
+    "peer-limit-global": 60,
+    "peer-limit-per-torrent": 30,
+    "cache-size-mb": 8,
+    "encryption": 1,
+    "port-forwarding-enabled": false
+}

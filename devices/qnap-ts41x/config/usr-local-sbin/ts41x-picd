@@ -1,0 +1,58 @@
+#!/bin/bash
+# Listen to the TS-41x PIC on /dev/ttyS1 and act on what it reports:
+#   0x40        power button     -> clean shutdown (the qnap-poweroff driver then cuts power)
+#   0x73..0x7a  fan error/normal -> log, status LED red blink, mail via ts41x-alert
+#   0x80..0xc6  temperature 0..70 C, 0x38 = 71-79 C, 0x39 = 80 C -> fan curve below
+# Codes from qcontrol's qnap-pic.h. Whether this PIC firmware sends temperatures on its
+# own has not been verified on a TS-412; without them the fan stays at the PIC's default.
+set -uo pipefail
+TTY=${TS41X_PIC_TTY:-/dev/ttyS1}
+STATE=/run/ts41x
+mkdir -p "$STATE"
+stty -F "$TTY" 19200 cs8 -cstopb -parenb raw -echo
+
+fan_for() { # temperature in C -> fan level, with 2 C hysteresis handled by the caller
+  local t=$1
+  if   [ "$t" -lt 40 ]; then echo silence
+  elif [ "$t" -lt 48 ]; then echo low
+  elif [ "$t" -lt 55 ]; then echo medium
+  elif [ "$t" -lt 62 ]; then echo high
+  else echo full; fi
+}
+
+last_fan="" last_temp=0
+stdbuf -o0 od -An -v -tx1 -w1 "$TTY" | while read -r hex; do
+  code=$((16#$hex))
+  case $code in
+    64)  # 0x40 power button
+      logger -t ts41x-picd "power button pressed: shutting down"
+      /usr/local/sbin/ts41x-pic buzz short || true
+      systemctl poweroff ;;
+    67)  ;;  # 0x43 power-loss notice, ignored like qcontrol does
+    115|117|119|121)  # fan 1..4 error
+      logger -t ts41x-picd -p daemon.err "fan error (PIC 0x$hex)"
+      /usr/local/sbin/ts41x-pic status red-blink || true
+      /usr/local/sbin/ts41x-alert "Fan error" "The PIC reported a fan failure (code 0x$hex)." || true ;;
+    116|118|120|122)
+      logger -t ts41x-picd "fan normal (PIC 0x$hex)" ;;
+    56|57|128|129|1[3-9][0-9])
+      if   [ "$code" -eq 56 ]; then t=75
+      elif [ "$code" -eq 57 ]; then t=80
+      elif [ "$code" -ge 128 ] && [ "$code" -le 198 ]; then t=$((code - 128))
+      else continue; fi
+      echo "$t" >"$STATE/temp"
+      # only change the fan when the temperature moved at least 2 C (hysteresis)
+      if [ $((t - last_temp)) -ge 2 ] || [ $((last_temp - t)) -ge 2 ] || [ -z "$last_fan" ]; then
+        f=$(fan_for "$t")
+        if [ "$f" != "$last_fan" ]; then
+          /usr/local/sbin/ts41x-pic fan "$f" && logger -t ts41x-picd "temp ${t}C -> fan $f"
+          last_fan=$f
+        fi
+        last_temp=$t
+      fi
+      if [ "$t" -ge 65 ]; then
+        /usr/local/sbin/ts41x-alert "Temperature ${t}C" "System temperature reported by the PIC is ${t}C." || true
+      fi ;;
+    *) logger -t ts41x-picd -p daemon.debug "unknown PIC code 0x$hex" ;;
+  esac
+done

@@ -1,0 +1,21 @@
+#!/bin/sh
+# Status LED from the md arrays (the TS-41x has one status LED, the disk LEDs are hardware):
+#   any array degraded / disk failed   -> red blinking + long beep + mail
+#   any array resyncing / recovering    -> green/red alternating
+#   all arrays clean                    -> green
+# Called by mdadm --monitor (PROGRAM line in mdadm.conf, with: event md-device [component])
+# and once at boot by ts41x-leds.service.
+event=${1:-} md=${2:-} comp=${3:-}
+pic=/usr/local/sbin/ts41x-pic
+if grep -qE '\[[U_]*_[U_]*\]|\(F\)' /proc/mdstat; then
+  $pic status red-blink
+  case "$event" in Fail|FailSpare|DegradedArray|DeviceDisappeared)
+    $pic buzz long
+    /usr/local/sbin/ts41x-alert "RAID $event on $md" "mdadm event: $event $md $comp
+$(cat /proc/mdstat)" ;;
+  esac
+elif grep -qE 'resync|recovery|reshape|check' /proc/mdstat; then
+  $pic status alt-blink
+else
+  $pic status green
+fi

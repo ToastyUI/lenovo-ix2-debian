@@ -1,0 +1,3 @@
+#!/bin/sh
+# update-initramfs -u also changes what U-Boot must load.
+exec /usr/local/sbin/ts41x-update-boot "$1"

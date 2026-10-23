@@ -1,0 +1,8 @@
+# Phone photo upload (FolderSync over SFTP). User "photos" sees only /Fotos, key auth only.
+# /srv/sftp-photos must be root-owned and not writable by others (sshd chroot rule).
+Match User photos
+    ChrootDirectory /srv/sftp-photos
+    ForceCommand internal-sftp -d /Fotos
+    AllowTcpForwarding no
+    X11Forwarding no
+    PermitTunnel no

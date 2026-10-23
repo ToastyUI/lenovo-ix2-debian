@@ -1,0 +1,3 @@
+#!/bin/sh
+# After a kernel install (and its initramfs), rebuild the disk boot image.
+exec /usr/local/sbin/ts41x-update-boot "$1"
