@@ -34,8 +34,8 @@ deb http://deb.debian.org/debian trixie main
 deb http://deb.debian.org/debian trixie-updates main
 deb http://security.debian.org/debian-security trixie-security main
 S
-mount --bind /proc "$R/proc"; mount --bind /sys "$R/sys"; mount --bind /dev "$R/dev"
-trap 'umount "$R/dev" "$R/sys" "$R/proc" 2>/dev/null || true' EXIT
+mount --bind /proc "$R/proc"; mount --bind /sys "$R/sys"; mount --bind /dev "$R/dev"; mount --bind /dev/pts "$R/dev/pts"
+trap 'umount "$R/dev/pts" "$R/dev" "$R/sys" "$R/proc" 2>/dev/null || true' EXIT
 printf '#!/bin/sh\nexit 101\n' >"$R/usr/sbin/policy-rc.d"; chmod +x "$R/usr/sbin/policy-rc.d"
 chroot "$R" apt-get update -qq
 chroot "$R" apt-get install -y -qq --no-install-recommends transmission-daemon minidlna wireguard-tools qrencode
