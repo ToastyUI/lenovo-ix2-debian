@@ -57,6 +57,10 @@ Reproduce with `sudo tests/run-sim-tests.sh path/to/kirkwood-ts419-6281.dtb` (16
   fan error -> red LED + alert, power button -> poweroff.
 - Kernel 7.1.9 with kernel C config cross-compiles for the TS-419 DTB (see docs/kernel.md).
 - All packages exist in Debian 13 armel.
+- `build-rootfs.sh` ran end to end under qemu-user with the 7.1.9 kernel package (27.8 MB .deb):
+  rootfs 515 MB unpacked / 200 MB as .tar.zst, boot image 14.5 MiB (zImage 4.8 MiB + xz
+  initramfs 9.7 MiB, well inside the 48 MiB area). The DTB in the image carries the U-Boot
+  read-only flag; the kernel hook correctly refused to touch disks inside the build chroot.
 
 ## Not tested
 

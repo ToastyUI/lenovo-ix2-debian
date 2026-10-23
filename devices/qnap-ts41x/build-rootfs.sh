@@ -6,7 +6,7 @@
 #
 # Run on an x86/arm64 Debian/Ubuntu host as root, preferably in a throwaway VM/container.
 # Needs: debootstrap, qemu-user-static + binfmt-support (armel chroot), u-boot-tools,
-# device-tree-compiler. Output in <workdir>/out: rootfs.tar.zst and boot.uimg.
+# device-tree-compiler, zstd. Output in <workdir>/out: rootfs.tar.zst and boot.uimg.
 #
 # Services are installed but only the base ones are enabled; transmission, minidlna,
 # WireGuard and the photo SFTP account need site-specific settings first (see docs/handleiding.md).
@@ -20,6 +20,10 @@ R=$W/rootfs OUT=$W/out
 DTB=kirkwood-ts419-6281.dtb
 export DEBIAN_FRONTEND=noninteractive LC_ALL=C
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
+for t in debootstrap mkimage fdtget fdtput zstd; do
+  command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }
+done
+[ -e /proc/sys/fs/binfmt_misc/qemu-arm ] || { echo "no qemu-arm binfmt handler (install qemu-user-static binfmt-support)" >&2; exit 1; }
 mkdir -p "$W" "$OUT"
 
 echo "[1/8] debootstrap trixie armel (minbase) $(date +%T)"
