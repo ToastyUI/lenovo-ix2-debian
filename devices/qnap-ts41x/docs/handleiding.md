@@ -29,7 +29,8 @@ Met de one-shot-bewaking is hij niet nodig om terug te komen, wel om te zien wá
 ## 0. Wat je nodig hebt
 
 - PC met Linux (of Proxmox-VM/container) voor het bouwen: `debootstrap qemu-user-static
-  binfmt-support u-boot-tools device-tree-compiler gcc-arm-linux-gnueabi python3`.
+  binfmt-support u-boot-tools device-tree-compiler gcc-arm-linux-gnueabi python3 zstd` en voor
+  de kernel `bc bison flex libssl-dev libelf-dev debhelper rsync cpio kmod`.
 - USB-stick (≥ 4 GB) voor de rootfs.
 - SSH op QTS: Configuratiescherm → Netwerkdiensten → Telnet/SSH. Login `admin` (is root).
   QTS heeft geen scp/sftp; bestanden gaan via `ssh ... 'cat > bestand' < bestand`.

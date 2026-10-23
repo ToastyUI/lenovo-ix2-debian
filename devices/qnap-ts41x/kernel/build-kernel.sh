@@ -5,6 +5,7 @@
 # PCI_MVEBU, s35390a RTC, qnap-poweroff, mv643xx_eth, SPI NOR, ATAG/appended-DTB support).
 #
 #   devices/qnap-ts41x/kernel/build-kernel.sh [C|B] [workdir]     (default C)
+# Build deps: gcc-arm-linux-gnueabi bc bison flex libssl-dev libelf-dev debhelper rsync cpio kmod
 # Output: <workdir>/out/linux-image-7.1.9-ts41x<c|b>-1_*_armel.deb, zImage, DTBs, .config
 set -euo pipefail
 VARIANT=${1:-C}; W=${2:-/root/ts41x/kernel}
