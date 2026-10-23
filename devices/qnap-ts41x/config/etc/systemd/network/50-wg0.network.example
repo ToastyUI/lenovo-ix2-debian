@@ -1,4 +1,5 @@
 [Match]
 Name=wg0
 [Network]
-Address=10.66.0.1/24
+Address=198.51.100.1/24
+# 198.51.100.0/24 is a documentation range: pick a private /24 that is not your LAN

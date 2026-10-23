@@ -155,6 +155,10 @@ def main():
     print("LVM: " + ("yes (static volume, mount via vgchange -ay)" if re.search(r"\bvg\d+", lvm) else "no / unknown"))
 
     section("Verdict")
+    if not ({"U-Boot Config", "U-Boot_Config"} & set(mtd) and ub):
+        print("This does not look like a QNAP TS-x19 inventory (no U-Boot / U-Boot Config flash partitions).")
+        print("No verdict.")
+        return
     a = feats.get("ide") and feats.get("saveenv") and feats.get("multi") and verdict["env ok"]
     u = feats.get("usb") and feats.get("ext2load") and verdict["env ok"]
     print(f"Route A  (Debian from disk, QTS fallback):  {'worth trying' if a else 'NOT possible'}"

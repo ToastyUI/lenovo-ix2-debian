@@ -7,7 +7,7 @@
     "umask": "002",
     "rpc-bind-address": "0.0.0.0",
     "rpc-whitelist-enabled": true,
-    "rpc-whitelist": "127.0.0.1,192.168.*.*",
+    "rpc-whitelist": "127.0.0.1,192.0.2.*",
     "rpc-host-whitelist-enabled": false,
     "rpc-authentication-required": true,
     "rpc-username": "CHANGE_ME",

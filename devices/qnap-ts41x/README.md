@@ -33,18 +33,20 @@ tests/run-sim-tests.sh       simulation tests (env tools vs libubootenv, loop di
 
 ## Why one multi-image instead of uImage + uInitrd
 
-Old U-Boot (1.1.x) resets the board when a separate ramdisk image has a bad header; a kernel
+U-Boot 1.1.x resets the board when a separate ramdisk image has a bad header (`do_reset` in
+`lib_arm/armlinux.c`, checked in the 1.1.4 source); a kernel
 image with a bad header only makes `bootm` return. With one multi-image there is one header
 and one CRC over kernel and initramfs, so any corruption ends in `bootm` returning and the QTS
 fallback running in the same boot. Every executed U-Boot variable is kept under 200 characters,
-because old U-Boot rejects command lines longer than its console buffer.
+because old U-Boot rejects command lines longer than its console buffer (`CFG_CBSIZE`, board-specific,
+often 256).
 
 ## Tested (simulation)
 
 Reproduce with `sudo tests/run-sim-tests.sh path/to/kirkwood-ts419-6281.dtb` (16 checks).
 
-- `qnap-uboot-env.py`: reads a TS-419P env written by libubootenv's `fw_setenv` identically
-  to `fw_printenv`; its own output is read back correctly by `fw_printenv`; corrupt dumps refused;
+- `qnap-uboot-env.py`: reads an env written by libubootenv's `fw_setenv` exactly as `fw_printenv`
+  does (checked with the published TS-419P dump in qnap_mtd_resize and with the synthetic env in the tests); its own output is read back correctly by `fw_printenv`; corrupt dumps refused;
   bytes after the env area untouched.
 - `ts41x-bootplan.py`: refuses stage2 without stage1, refuses while the saveenv probe is pending,
   `restore` gives back exactly the original set of variables.

@@ -8,4 +8,4 @@ PrivateKeyFile=/etc/systemd/network/wg0.key
 [WireGuardPeer]
 # phone
 PublicKey=PHONE_PUBLIC_KEY
-AllowedIPs=10.66.0.2/32
+AllowedIPs=198.51.100.2/32
