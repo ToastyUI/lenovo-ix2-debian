@@ -66,6 +66,9 @@ def main():
     if m:
         print(f"RAM: {int(m.group(1)) // 1024} MiB")
     print(text("qts-version.txt").strip() or text("version.txt").strip()[:200])
+    idt = text("id.txt")
+    if idt:
+        print("SSH user is root (uid 0)" if "uid=0(" in idt else "WARNING: SSH user is not root: " + idt.splitlines()[1] if len(idt.splitlines()) > 1 else idt)
     eths = sorted(set(re.findall(r"^(eth\d+)", text("interfaces.txt"), re.M)))
     print(f"Ethernet interfaces: {', '.join(eths) or 'unknown'}")
     print(f"cmdline: {text('cmdline.txt').splitlines()[1] if len(text('cmdline.txt').splitlines()) > 1 else '?'}")

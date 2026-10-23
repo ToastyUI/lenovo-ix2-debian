@@ -19,6 +19,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 log "system"
 run uname.txt uname -a
+run id.txt id
 run cpuinfo.txt cat /proc/cpuinfo
 run meminfo.txt cat /proc/meminfo
 run cmdline.txt cat /proc/cmdline

@@ -32,8 +32,19 @@ Met de one-shot-bewaking is hij niet nodig om terug te komen, wel om te zien wá
   binfmt-support u-boot-tools device-tree-compiler gcc-arm-linux-gnueabi python3 zstd` en voor
   de kernel `bc bison flex libssl-dev libelf-dev debhelper rsync cpio kmod`.
 - USB-stick (≥ 4 GB) voor de rootfs.
-- SSH op QTS: Configuratiescherm → Netwerkdiensten → Telnet/SSH. Login `admin` (is root).
-  QTS heeft geen scp/sftp; bestanden gaan via `ssh ... 'cat > bestand' < bestand`.
+- **Root op QTS:** Configuratiescherm → *Network & File Services* → *Telnet/SSH* →
+  *Allow SSH connection* → Apply. Log in als `admin`: op de ARM-QTS van deze modellen is dat
+  root (uid 0); controleer met `id`. Krijg je een *Console Management*-menu, kies `Q` en dan `Y`
+  voor een gewone shell. QTS heeft geen scp/sftp; bestanden gaan via
+  `ssh ... 'cat > bestand' < bestand`.
+- **Wachtwoord kwijt:** resetknop achterop 3 seconden indrukken tot de piep. Dat zet o.a. het
+  admin-wachtwoord, netwerk (DHCP) en poort 8080 terug; data blijft staan. Het standaard-
+  wachtwoord hangt af van de QTS-versie: tot en met 4.4.1 is het `admin`, vanaf 4.4.2 het eerste
+  MAC-adres (hoofdletters, zonder tekens). De TS-41x zit op QTS 4.3.x, dus `admin`.
+- **Root op Debian (na de installatie):** `ssh root@NAS` met de sleutel die je aan
+  `build-rootfs.sh` gaf. Wachtwoord-login staat uit (`PermitRootLogin prohibit-password`,
+  `PasswordAuthentication no`). Zonder werkende sleutel: USB-stick in een PC, sleutel in
+  `/root/.ssh/authorized_keys` zetten, of stroom eraf/erop zodat QTS boot.
 
 ## 1. Inventaris (alleen lezen)
 
