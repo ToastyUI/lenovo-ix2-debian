@@ -117,8 +117,11 @@ rm -rf "$R/var/lib/apt/lists/"* "$R/usr/share/doc/"* "$R/usr/share/man/"*
 # The tarball is shared between units: no SSH host keys (ts41x-ssh-hostkeys makes them on
 # first boot) and an empty machine-id (systemd fills it on first boot).
 rm -f "$R"/etc/ssh/ssh_host_*; : >"$R/etc/machine-id"
-tar -C "$R" --numeric-owner -cf - . | zstd -q -T0 -o "$OUT/rootfs.tar.zst"
+# unmount the chroot mounts first (recursive: /sys can carry submounts such as efivars)
+umount -R "$R/dev" "$R/sys" "$R/proc" 2>/dev/null || true
+trap - EXIT
+tar -C "$R" --numeric-owner --one-file-system -cf - . | zstd -q -T0 -o "$OUT/rootfs.tar.zst"
 # .tar.gz for unpacking on stock QTS, whose busybox tar has no zstd
-tar -C "$R" --numeric-owner -cf - . | gzip -6 >"$OUT/rootfs.tar.gz"
+tar -C "$R" --numeric-owner --one-file-system -cf - . | gzip -6 >"$OUT/rootfs.tar.gz"
 (cd "$OUT" && sha256sum boot.uimg rootfs.tar.zst rootfs.tar.gz >SHA256SUMS)
 ls -l "$OUT"
