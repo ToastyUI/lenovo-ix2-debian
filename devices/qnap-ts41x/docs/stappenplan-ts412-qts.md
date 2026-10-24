@@ -88,11 +88,14 @@ ssh admin@NAS "rm -f /tmp/boot.uimg; mkdir -p /mnt/HDA_ROOT/ts41x"
 ssh admin@NAS "cat > /tmp/ib.sh" < ts41x-install-boot.sh
 ssh admin@NAS "cat > /mnt/HDA_ROOT/ts41x/boot.uimg" < boot.uimg
 ssh admin@NAS "md5sum /mnt/HDA_ROOT/ts41x/boot.uimg"
-ssh admin@NAS "swapoff -a && cat /proc/swaps && sh /tmp/ib.sh --image /mnt/HDA_ROOT/ts41x/boot.uimg --mode qts --disks \"sda sdb\""
+ssh admin@NAS "egrep 'MemFree|^Cached|SwapFree' /proc/meminfo"
+ssh admin@NAS "swapoff /dev/md4 && cat /proc/swaps && sh /tmp/ib.sh --image /mnt/HDA_ROOT/ts41x/boot.uimg --mode qts --disks \"sda sdb\""
 ssh admin@NAS "sh /tmp/ib.sh --image /mnt/HDA_ROOT/ts41x/boot.uimg --mode qts --disks \"sda sdb\" --write"
 ```
 De md5 moet gelijk zijn aan die van `boot.uimg` op de pc. `/proc/swaps` moet daarna leeg zijn
-(alleen de kopregel); het script weigert zolang er swap actief is. Noteer de LBA aan het eind
+(alleen de kopregel); het script weigert zolang er swap actief is. `swapoff -a` werkt niet op QTS
+(busybox 1.01 kijkt alleen naar /etc/fstab): noem `/dev/md4` expliciet. MemFree + Cached moet ruim
+boven het swapgebruik liggen. Noteer de LBA aan het eind
 (verwacht `0x1035c8`) en controleer `verified /dev/sda` en `verified /dev/sdb`.
 
 **Direct daarna stap 4 en de herstart**, zonder QTS ertussen opnieuw op te starten: het image staat
@@ -144,6 +147,18 @@ wachtwoord gaat pas weg als de sleutel aantoonbaar werkt:
    ```
 4. Test opnieuw stap 2 in een nieuw venster. Werkt het niet: in de nog open eerste sessie
    `mv /root/05-temp-root-password.conf.off /etc/ssh/sshd_config.d/05-temp-root-password.conf && systemctl reload ssh`.
+
+Gebruiker voor de eigenaar (voorbeeld `lars`), met een tijdelijk wachtwoord dat bij de eerste
+login veranderd moet worden; wachtwoord-login alleen vanaf het LAN:
+```sh
+useradd -m -s /bin/bash -G sudo lars
+echo 'lars:TIJDELIJK' | chpasswd && chage -d 0 lars
+cat > /etc/ssh/sshd_config.d/06-lars-lan-password.conf <<'C'
+Match User lars Address 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    PasswordAuthentication yes
+C
+sshd -t && systemctl reload ssh
+```
 
 Controle:
 ```sh
