@@ -39,7 +39,11 @@ spec = importlib.util.spec_from_file_location("qenv", os.path.join(HERE, "qnap-u
 qenv = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(qenv)
 
-LOAD_ADDR = "0x800000"     # multi-image is read here; ends below 0x3800000 (48 MiB area)
+# The multi-image is read here (48 MiB area: up to 0x5000000). bootm copies the zImage to 0x8000
+# but leaves the initrd in place, right behind the zImage inside the multi-image. The kernel
+# decompresses to 0x8000 + Image size (17.5 MiB for 7.1.9 with this config), so at 0x800000 it
+# overwrote the initrd (found on the TS-412: both first boots died without an initramfs).
+LOAD_ADDR = "0x2000000"
 AREA_SECTORS = "0x18000"   # 48 MiB, must match tools/ts41x-install-boot.sh
 # Debian cmdline. Kept short on purpose: old U-Boot rejects or truncates command lines longer
 # than its console buffer (often 256 bytes), so every executed variable stays under MAX_CMD.
@@ -77,6 +81,8 @@ def main():
                          "(GPL source, docs/uboot-analysis.md), so this only works on a reflashed/custom U-Boot.")
     ap.add_argument("--pic-led", action="store_true", help="add uart1 LED feedback (only if the analyzer found uart1)")
     ap.add_argument("--extra-args", default="", help="appended to the Debian kernel command line")
+    ap.add_argument("--set", metavar="NAME=VALUE", action="append", default=[],
+                    help="also set this env variable in stage2, e.g. ethaddr=00:08:9B:D0:24:DC")
     ap.add_argument("--pic-wdt-off", action="store_true",
                     help="send the PIC watchdog-off code (uart1 0x67) before trying Debian")
     ap.add_argument("--force", action="store_true", help="accept a bootcmd that does not look stock")
@@ -135,6 +141,10 @@ def main():
             out.append(("ts_boot_lba", a.lba))
             chain.append("run ts_hdd")
         chain.append("run bootcmd_fallback")
+        for kv in a.set:
+            if "=" not in kv or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", kv.split("=", 1)[0]):
+                sys.exit(f"--set needs NAME=VALUE (got {kv!r})")
+            out.append(tuple(kv.split("=", 1)))
         out += [("bootcmd_debian", "; ".join(chain)),
                 ("ts_probe_saveenv", None),
                 ("bootcmd", "run bootcmd_debian")]
