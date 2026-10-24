@@ -3,7 +3,7 @@
 #   usb : /boot.uimg on the USB stick's ext2 partition labelled BOOT (bootplan --usb)
 #   qts : boot area inside partition 2 (QTS swap) of each disk, QTS data untouched (bootplan --lba)
 #   raw : boot area before partition 1 on disks partitioned by this project (bootplan --lba)
-MODE="usb"
+MODE="qts"
 # Empty = every non-USB sd? disk. List all bays that should be able to boot.
 DISKS=""
 DTB=kirkwood-ts419-6281.dtb

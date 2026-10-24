@@ -1,4 +1,4 @@
-# QNAP TS-41x: Debian 13 vanaf USB of disk, met QTS als terugval
+# QNAP TS-41x: Debian 13 vanaf disk, met QTS als terugval
 
 Voor TS-410/412/419P/419U (Kirkwood 88F6281, DTB `kirkwood-ts419-6281.dtb`). TS-11x/21x/22x
 gebruiken dezelfde PIC en U-Boot-familie met `kirkwood-ts219-*.dtb`: zelfde stappen, ander DTB,
@@ -11,23 +11,24 @@ Nog niet op een echte TS-412 geboot. Lees eerst alles, voer dan stap voor stap u
 ## Hoe het werkt
 
 - QTS blijft in de flash staan en is de terugval.
-- U-Boot laadt één *multi*-image (zImage + DTB + initramfs) en probeert in deze volgorde:
-  1. **USB-stick** (route A'): `/boot.uimg` op partitie 1 van de stick (ext2, label `BOOT`).
-     Er wordt niets op de schijven geschreven; QTS en de data blijven 100% onaangeroerd.
-  2. **Schijven** (route A): `ide read` uit een vast stuk van partitie 2 van elke schijf
-     (de QTS-swap, md256). QTS-data op partitie 3 blijft onaangeroerd.
-  3. **QTS** uit de flash.
-  Je kiest welke bronnen meedoen; met alleen USB vervalt stap 4 hieronder.
+- **USB-boot kan niet** op deze hardware: de stock-U-Boot (U-Boot 1.1.4, board `mv_kw`) heeft
+  geen `usb`-commando. Bevestigd uit QNAP's GPL-bron, zie [uboot-analysis.md](uboot-analysis.md).
+  De stick is er dus alleen voor de rootfs; het boot-image staat op een schijf.
+- U-Boot laadt één *multi*-image (zImage + DTB + initramfs) van de SATA-schijven en probeert:
+  1. **Schijf**: `ide read` uit een vast stuk van partitie 2 van elke schijf (de QTS-swap, md256);
+     QTS-data op partitie 3 blijft onaangeroerd. Of, als je een schijf helemaal aan Debian geeft,
+     `ext2load ide` van een ext2-partitie (`--disk-ext2`) — dan is geen ruwe sector-area nodig.
+  2. **QTS** uit de flash.
 - **One-shot-bewaking:** `bootcmd_debian` zet eerst `bootcmd` terug naar QTS en doet `saveenv`,
   pas daarna probeert hij Debian. Mislukt het lezen of de CRC, dan boot QTS in dezelfde start.
   Hangt Debian, dan boot na stroom eraf/erop QTS. Alleen een volledig opgestarte Debian zet de
   volgende Debian-poging weer aan (`ts41x-boot-ok.service`). Een boot-lus kan dus niet.
 - Debians rootfs staat op een USB-stick met label `rootfs` (zoals bij de ix2).
 
-Wat U-Boot moet kunnen: `saveenv` en multi-images, plus `usb` + `ext2load` (USB) en/of `ide`
-(schijven). `ts412-analyze.py` controleert dat vooraf. Of de U-Boot de stick of de bays achter de
-PCIe-controller (Marvell 88SX7042) echt leest, blijkt pas bij de eerste poging; gaat het mis,
-dan start QTS gewoon.
+Wat U-Boot moet kunnen: `run`, `saveenv`, multi-images, `ide` en `ext2load ide`. Volgens de
+GPL-bron zijn die allemaal aanwezig (en `usb` niet). `ts412-analyze.py` bevestigt het op jouw
+exemplaar. Of U-Boot de bays achter de PCIe-controller (Marvell 88SX7042) echt leest, blijkt pas
+bij de eerste poging; gaat het mis, dan start QTS gewoon.
 
 **Verzekering:** een USB-TTL-adapter van 3,3 V (seriële console, 115200) kost een paar euro.
 Met de one-shot-bewaking is hij niet nodig om terug te komen, wel om te zien wát er misgaat.
@@ -62,9 +63,8 @@ python3 devices/qnap-ts41x/tools/ts412-analyze.py ts412-inventory.tar
 Bewaar `ts412-inventory.tar`: daar zitten ook kopieën van alle flashpartities in (mtd0–mtd5).
 Dat is je terugweg. Het script schrijft niets.
 
-- Route A' "worth trying": gebruik de USB-route (aanbevolen, raakt de schijven niet aan).
-- Alleen route A "worth trying": gebruik de schijf-route.
-- Beide "NOT possible": stop. Dan blijft route B over
+- Route A "worth trying": gebruik de schijf-route (hieronder).
+- "NOT possible": stop. Dan blijft route B over
 (Debian in de flash via [qnap_mtd_resize](https://github.com/amouiche/qnap_mtd_resize_for_bullseye),
 geen QTS-terugval).
 
@@ -79,17 +79,14 @@ sudo devices/qnap-ts41x/build-rootfs.sh /root/ts41x/kernel/out/linux-image-*.deb
 
 Uitvoer in `/root/ts41x/out`: `rootfs.tar.zst` en `boot.uimg`.
 
-USB-stick klaarmaken (controleer `sdX`!). Partitie 1 is klein ext2 voor U-Boot, partitie 2 de rootfs:
+USB-stick klaarmaken voor de rootfs (controleer `sdX`!):
 
 ```sh
-printf 'label: dos\nstart=2048, size=128MiB, type=83\ntype=83\n' | sudo sfdisk /dev/sdX
-sudo mkfs.ext2 -I 128 -L BOOT /dev/sdX1      # U-Boot 1.1.4 rekent vast met 128-byte inodes
-sudo mkfs.ext4 -L rootfs /dev/sdX2
-sudo mount /dev/sdX1 /mnt && sudo cp /root/ts41x/out/boot.uimg /mnt/boot.uimg && sudo umount /mnt
-sudo mount /dev/sdX2 /mnt && sudo tar -C /mnt -xf /root/ts41x/out/rootfs.tar.zst && sudo umount /mnt
+sudo mkfs.ext4 -L rootfs /dev/sdX1
+sudo mount /dev/sdX1 /mnt && sudo tar -C /mnt -xf /root/ts41x/out/rootfs.tar.zst && sudo umount /mnt
 ```
 
-Ook bij de schijf-route mag partitie 1 er staan; U-Boot slaat hem dan gewoon over.
+Het boot-image komt niet op de stick maar op een schijf (stap 4).
 
 ## 3. Probe: blijft `saveenv` bewaard? (fase 1)
 
@@ -130,11 +127,12 @@ hetzelfde image op dezelfde plek, dus elke bay kan booten. Het script controleer
 Gebruik `--pic-led` alleen als de analyse `uart1: yes` gaf: de statusled knippert dan
 groen/rood zolang U-Boot Debian probeert.
 
-Kies de bronnen: `--usb` (stick), `--lba 0x…` (schijven, LBA uit stap 4), of beide (eerst USB).
+Kies de bron: `--lba 0x…` (ruwe area uit stap 4, QTS-partities blijven heel) of
+`--disk-ext2 0:1` (ext2load van een ext2-partitie, voor een schijf die je helemaal aan Debian geeft).
 
 ```sh
-python3 devices/qnap-ts41x/tools/ts41x-bootplan.py stage2 --env mtd4.after1.bin --usb -o stage2.txt
-# of: ... stage2 --env mtd4.after1.bin --usb --lba 0x1035a8 -o stage2.txt
+python3 devices/qnap-ts41x/tools/ts41x-bootplan.py stage2 --env mtd4.after1.bin --lba 0x1035a8 -o stage2.txt
+# of: ... stage2 --env mtd4.after1.bin --disk-ext2 0:1 -o stage2.txt
 python3 devices/qnap-ts41x/tools/qnap-uboot-env.py set mtd4.after1.bin -s stage2.txt -o mtd4.stage2.bin
 ssh admin@NAS 'cat > /dev/mtdblock4' < mtd4.stage2.bin
 ```
@@ -147,7 +145,7 @@ Kwam QTS terug? Dan lukte de poging niet. Debian probeert het niet opnieuw tot j
 ## 6. Op Debian instellen
 
 ```sh
-cp /etc/ts41x/boot.conf.example /etc/ts41x/boot.conf     # MODE="usb", "qts" of "usb qts", gelijk aan stage2
+cp /etc/ts41x/boot.conf.example /etc/ts41x/boot.conf     # MODE="qts" (ruwe area) of "raw", gelijk aan stage2
 mdadm --examine --scan                                    # alleen lezen: welke arrays er zijn
 ```
 
@@ -178,7 +176,8 @@ mdadm --examine --scan                                    # alleen lezen: welke 
 
 ## Wat er nog niet getest is
 
-- Of de TS-412-U-Boot de PCIe-bays met `ide` leest, en welke bay apparaat 0 is.
+- Of de TS-412-U-Boot de PCIe-bays met `ide` leest, en welke bay apparaat 0 is (de commandoset zelf is uit de GPL-bron bevestigd).
 - Of `saveenv` bewaard blijft (stap 3 test dat veilig).
 - Of de PIC-firmware zelf temperaturen stuurt; zo niet, dan regelt `ts41x-picd` de fan niet.
 - `uart1`-ledcommando's in U-Boot (alleen met `--pic-led`).
+- Booten op echte hardware: nog niet gedaan.

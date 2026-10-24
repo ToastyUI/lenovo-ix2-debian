@@ -10,11 +10,15 @@ apply to an mtd4 dump with qnap-uboot-env.py on a PC, or with fw_setenv -s on De
 
   ts41x-bootplan.py stage1 --env mtd4.bin -o stage1.txt
   ts41x-bootplan.py stage2 --env mtd4.bin --lba 0x1035a8 [--pic-led] -o stage2.txt
-  ts41x-bootplan.py stage2 --env mtd4.bin --usb [--lba 0x1035a8] -o stage2.txt
+  ts41x-bootplan.py stage2 --env mtd4.bin --disk-ext2 0:1 -o stage2.txt
+  ts41x-bootplan.py stage2 --env mtd4.bin --lba 0x1035a8 -o stage2.txt
 
-Boot order in stage2: USB stick (--usb: ext2load of /boot.uimg from partition 1, an ext2
-filesystem) -> disks (--lba: raw area written by ts41x-install-boot.sh) -> QTS from flash.
-Use --usb only when ts412-analyze.py found "usb" and "ext2load" in this U-Boot.
+Sources, tried in the order given, then QTS from flash:
+  --disk-ext2 DEV:PART  ext2load /boot.uimg from an ext2 partition on a SATA disk
+  --lba 0x...           ide read of a raw area written by ts41x-install-boot.sh
+  --usb                 ext2load from USB -- NOT on the stock TS-41x U-Boot, which has no
+                        usb command (GPL source, docs/uboot-analysis.md); custom U-Boot only
+On stock hardware use --disk-ext2 (cleanest) or --lba.
 
 How the one-shot guard works (stage2):
   bootcmd=run bootcmd_debian
@@ -61,8 +65,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("stage", choices=["stage1", "stage2", "restore"])
     ap.add_argument("--env", required=True, help="raw dump of mtd4 (U-Boot Config)")
-    ap.add_argument("--lba", help="first sector of the disk boot area (from ts412-analyze.py / ts41x-install-boot.sh)")
-    ap.add_argument("--usb", action="store_true", help="try /boot.uimg on the USB stick's first partition (ext2) first")
+    ap.add_argument("--lba", help="raw disk boot area, first sector (from ts412-analyze.py / ts41x-install-boot.sh)")
+    ap.add_argument("--disk-ext2", metavar="DEV:PART",
+                    help="ext2load /boot.uimg from an ext2 partition on a SATA disk, e.g. 0:1 (ide dev:part)")
+    ap.add_argument("--usb", action="store_true",
+                    help="try /boot.uimg from USB first. NOTE: the stock TS-41x U-Boot has no 'usb' command "
+                         "(GPL source, docs/uboot-analysis.md), so this only works on a reflashed/custom U-Boot.")
     ap.add_argument("--pic-led", action="store_true", help="add uart1 LED feedback (only if the analyzer found uart1)")
     ap.add_argument("--force", action="store_true", help="accept a bootcmd that does not look stock")
     ap.add_argument("-o", "--output", required=True)
@@ -87,8 +95,14 @@ def main():
         if env.get("ts_probe_saveenv") != "ok" and not a.force:
             sys.exit(f"ts_probe_saveenv={env.get('ts_probe_saveenv')!r}: saveenv not proven to persist; "
                      "without it the one-shot guard does not work. Stop here.")
-        if not a.usb and not a.lba:
-            sys.exit("give --usb, --lba 0x..., or both")
+        if not a.usb and not a.lba and not a.disk_ext2:
+            sys.exit("give at least one source: --disk-ext2 DEV:PART, --lba 0x..., or --usb")
+        if a.usb:
+            print("WARNING: the stock TS-41x U-Boot has no 'usb' command (see docs/uboot-analysis.md).\n"
+                  "         --usb only works on a reflashed/custom U-Boot. Use --disk-ext2 or --lba on stock.",
+                  file=sys.stderr)
+        if a.disk_ext2 and not re.fullmatch(r"\d+:\d+", a.disk_ext2):
+            sys.exit("--disk-ext2 must be DEV:PART, e.g. 0:1")
         if a.lba and not re.fullmatch(r"0x[0-9a-fA-F]+", a.lba):
             sys.exit("--lba must be hex, as printed by the analyzer/installer (e.g. 0x1035a8)")
         if a.lba and int(a.lba, 16) >= 1 << 28:
@@ -102,6 +116,10 @@ def main():
             out.append(("ts_usb", f"usb reset; mw {LOAD_ADDR} 0 1; ext2load usb 0:1 {LOAD_ADDR} /boot.uimg; "
                                   "run ts_boot; usb stop"))
             chain.append("run ts_usb")
+        if a.disk_ext2:
+            out.append(("ts_ext2", f"ide reset; mw {LOAD_ADDR} 0 1; ext2load ide {a.disk_ext2} {LOAD_ADDR} /boot.uimg; "
+                                   "run ts_boot"))
+            chain.append("run ts_ext2")
         if a.lba:
             out.append(("ts_hdd", f"ide reset; mw {LOAD_ADDR} 0 1; ide read {LOAD_ADDR} {a.lba[2:]} {AREA_SECTORS[2:]}; "
                                   "run ts_boot"))
@@ -116,11 +134,11 @@ def main():
             if need not in env:
                 sys.exit(f"{need} missing: nothing to restore from")
         out += [("bootcmd", env["bootcmd_stock"]), ("bootargs", env["bootargs_stock"])]
-        out += [(k, None) for k in ("bootcmd_fallback", "bootcmd_debian", "ts_usb", "ts_hdd", "ts_boot",
+        out += [(k, None) for k in ("bootcmd_fallback", "bootcmd_debian", "ts_usb", "ts_ext2", "ts_hdd", "ts_boot",
                                     "ts_boot_lba", "ts_probe_saveenv",
                                     "ts_last_ok", "bootcmd_stock", "bootargs_stock")]
     for k, v in out:
-        if v is not None and (k.startswith("bootcmd") or k in ("ts_usb", "ts_hdd", "ts_boot")) and len(v) > MAX_CMD:
+        if v is not None and (k.startswith("bootcmd") or k in ("ts_usb", "ts_ext2", "ts_hdd", "ts_boot")) and len(v) > MAX_CMD:
             sys.exit(f"{k} is {len(v)} chars; keep executed commands under {MAX_CMD} for old U-Boot")
     write(a.output, out)
 

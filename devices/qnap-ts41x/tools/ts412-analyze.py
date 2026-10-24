@@ -163,12 +163,15 @@ def main():
         print("No verdict.")
         return
     a = feats.get("ide") and feats.get("saveenv") and feats.get("multi") and verdict["env ok"]
+    e2 = feats.get("ide") and feats.get("ext2load") and feats.get("saveenv") and verdict["env ok"]
     u = feats.get("usb") and feats.get("ext2load") and verdict["env ok"]
     print(f"Route A  (Debian from disk, QTS fallback):  {'worth trying' if a else 'NOT possible'}"
           f"{'' if a else '  (needs ide + saveenv + multi-image + valid env)'}")
+    print(f"  A via ext2 on a disk (ts41x-bootplan --disk-ext2): {'worth trying' if e2 else 'NOT possible'}"
+          f"{'  (ext2load ide, no raw area)' if e2 else ''}")
     if a and not feats.get("sata pci"):
         print("         note: no 88SX7042 strings found; U-Boot may not see the PCIe SATA bays at all")
-    print(f"Route A' (USB first, like the ix2):         {'worth trying (ts41x-bootplan.py stage2 --usb)' if u else 'NOT possible'}")
+    print(f"Route A' (USB boot):                         {'worth trying' if u else 'NOT possible (stock TS-41x U-Boot has no usb command; GPL source)'}")
     print("Route B  (Debian in flash via qnap_mtd_resize): possible (TS-412 success reported upstream),")
     print("         but needs a kernel under 3 MiB; this repo's 7.1.9 zImage is 4.8 MiB (docs/kernel.md)")
     print(f"PIC LED feedback from U-Boot (uart1):     {'yes' if feats.get('uart1') else 'no'}")
