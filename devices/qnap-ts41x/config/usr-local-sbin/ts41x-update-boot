@@ -28,15 +28,18 @@ img=/boot/ts41x-boot-$kver.uimg
 /usr/local/sbin/ts41x-mkimage "$zimg" "$dtb" "$initrd" "$img" "Debian $kver" >/dev/null
 for m in $MODE; do
   case "$m" in
-    usb|ext2)  # /boot.uimg on the ext2 partition labelled BOOT (a USB stick, or a SATA disk),
-          # read by U-Boot's ext2load usb / ext2load ide
-      dev=$(blkid -L BOOT) || { echo "ts41x-update-boot: no partition labelled BOOT" >&2; exit 1; }
-      mnt=$(findmnt -n -o TARGET -S "$dev" | head -1)
-      if [ -z "$mnt" ]; then mnt=/run/ts41x-bootpart; mkdir -p "$mnt"; mount -t ext2 "$dev" "$mnt"; tmpmnt=1; fi
-      cp "$img" "$mnt/boot.uimg.new" && sync && mv "$mnt/boot.uimg.new" "$mnt/boot.uimg" && sync
-      cmp -s "$img" "$mnt/boot.uimg" || { echo "ts41x-update-boot: verify of $dev failed" >&2; exit 1; }
-      [ -n "${tmpmnt:-}" ] && umount "$mnt"
-      echo "boot image copied to $dev:/boot.uimg" ;;
+    usb|ext2)  # /boot.uimg on EVERY ext2 partition labelled BOOT (a USB stick, or one or more
+          # SATA disks for a redundant boot), read by U-Boot's ext2load usb / ext2load ide
+      devs=$(blkid -o device -t LABEL=BOOT 2>/dev/null)
+      [ -n "$devs" ] || { echo "ts41x-update-boot: no partition labelled BOOT" >&2; exit 1; }
+      for dev in $devs; do
+        mnt=$(findmnt -n -o TARGET -S "$dev" | head -1); tmpmnt=
+        if [ -z "$mnt" ]; then mnt=/run/ts41x-bootpart; mkdir -p "$mnt"; mount -t ext2 "$dev" "$mnt"; tmpmnt=1; fi
+        cp "$img" "$mnt/boot.uimg.new" && sync && mv "$mnt/boot.uimg.new" "$mnt/boot.uimg" && sync
+        cmp -s "$img" "$mnt/boot.uimg" || { echo "ts41x-update-boot: verify of $dev failed" >&2; exit 1; }
+        [ -n "$tmpmnt" ] && umount "$mnt"
+        echo "boot image copied to $dev:/boot.uimg"
+      done ;;
     qts|raw)
       /usr/local/sbin/ts41x-install-boot --image "$img" --mode "$m" ${DISKS:+--disks "$DISKS"} --write ;;
     *) echo "ts41x-update-boot: unknown MODE '$m'" >&2; exit 1 ;;

@@ -43,8 +43,11 @@ python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" --usb --lba 0x1035
   && ok "stage2 --usb --lba: disarm, then USB, then disks, then QTS" || bad "usb chain"
 awk -F= '/^(bootcmd|ts_usb|ts_hdd|ts_boot)/{ if (length($0)-length($1)-1 > 200) exit 1 }' "$T/s2u.txt" && ok "usb chain vars <= 200 chars" || bad "usb chain too long"
 python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" --disk-ext2 0:1 -o "$T/s2e.txt" 2>/dev/null \
-  && grep -q '^ts_ext2=ide reset; mw 0x800000 0 1; ext2load ide 0:1 0x800000 /boot.uimg; run ts_boot$' "$T/s2e.txt" \
+  && grep -q '^ts_ext2_0=ide reset; mw 0x800000 0 1; ext2load ide 0:1 0x800000 /boot.uimg; run ts_boot$' "$T/s2e.txt" \
   && ok "stage2 --disk-ext2: ext2load ide from a SATA disk" || bad "disk-ext2 chain"
+python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" --disk-ext2 0:1 --disk-ext2 1:1 -o "$T/s2r.txt" 2>/dev/null \
+  && grep -q '^bootcmd_debian=setenv bootcmd run bootcmd_fallback; saveenv; run ts_ext2_0; run ts_ext2_1; run bootcmd_fallback$' "$T/s2r.txt" \
+  && ok "stage2 --disk-ext2 x2: redundant bay1 -> bay2 -> QTS" || bad "redundant chain"
 python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" --usb -o "$T/s2w.txt" 2>"$T/warn.txt" \
   && grep -qi "no 'usb' command" "$T/warn.txt" && ok "stage2 --usb warns it is unavailable on stock U-Boot" || bad "usb warning"
 python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" -o "$T/x" 2>/dev/null && bad "stage2 without source accepted" || ok "stage2 refused without a source"
