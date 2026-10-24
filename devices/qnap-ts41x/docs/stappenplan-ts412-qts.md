@@ -26,6 +26,17 @@ certutil -hashfile rootfs.tar.gz SHA256
 ```
 Vergelijk met `SHA256SUMS`.
 
+## 0b. Shell-check op QTS (alleen lezen)
+
+QTS heeft busybox 1.01 (2005): geen `od`, geen `printf`, geen `readlink -f`. De scripts houden daar
+rekening mee; deze check bevestigt het op de echte NAS:
+
+```bat
+ssh admin@NAS "sh -s" < ts41x-qts-probe.sh
+```
+Alles moet `ok` zijn. Een `FAIL`: eerst melden, niet doorgaan met stap 2/3.
+Geef bij stap 2 en 3 altijd `--disks "sda sdb"` mee en laat USB-sticks eruit.
+
 ## 1. U-Boot-proef: bewaart U-Boot zijn instellingen? (SCHRIJFT de U-Boot-env)
 
 QTS start daarna precies zoals altijd. Alleen bewaart U-Boot eenmalig `ts_probe_saveenv=ok`.
@@ -56,12 +67,12 @@ ssh admin@NAS "cat /dev/mtdblock4" > mtd4.after1.bin
 
 ```bat
 ssh admin@NAS "cat > /tmp/prep.sh" < ts41x-prep-qts.sh
-ssh admin@NAS "sh /tmp/prep.sh"
+ssh admin@NAS "sh /tmp/prep.sh --disks \"sda sdb\""
 ```
 Droge run: moet voor elke schijf `ok: /dev/sdX3 ... free` geven en eindigen met `dry run`. Dan:
 
 ```bat
-ssh admin@NAS "sh /tmp/prep.sh --write" < rootfs.tar.gz
+ssh admin@NAS "sh /tmp/prep.sh --disks \"sda sdb\" --write" < rootfs.tar.gz
 ```
 Duurt een paar minuten (200 MB over het netwerk, uitpakken op de NAS). Eindigt met `done.` en
 `/proc/mdstat` met `md100` aan het synchroniseren. Dat synchroniseren duurt uren en mag gewoon
@@ -72,8 +83,8 @@ doorlopen, ook over een herstart heen.
 ```bat
 ssh admin@NAS "cat > /tmp/ib.sh" < ts41x-install-boot.sh
 ssh admin@NAS "cat > /tmp/boot.uimg" < boot.uimg
-ssh admin@NAS "swapoff -a; sh /tmp/ib.sh --image /tmp/boot.uimg --mode qts"
-ssh admin@NAS "swapoff -a; sh /tmp/ib.sh --image /tmp/boot.uimg --mode qts --write"
+ssh admin@NAS "swapoff -a; sh /tmp/ib.sh --image /tmp/boot.uimg --mode qts --disks \"sda sdb\""
+ssh admin@NAS "swapoff -a; sh /tmp/ib.sh --image /tmp/boot.uimg --mode qts --disks \"sda sdb\" --write"
 ```
 Noteer de LBA aan het eind (verwacht `0x1035c8` op de TS-412 van de inventaris).
 

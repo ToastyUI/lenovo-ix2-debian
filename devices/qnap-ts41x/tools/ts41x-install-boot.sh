@@ -27,15 +27,21 @@ while [ $# -gt 0 ]; do
   esac
 done
 die() { echo "ERROR: $*" >&2; exit 1; }
+# Must also run under QTS's busybox 1.01: no od, no printf, no readlink -f, maybe no "command".
+have() { command -v "$1" >/dev/null 2>&1 || which "$1" >/dev/null 2>&1; }
+hex() { # hex FILE SKIP COUNT: those bytes as lowercase hex
+  if have od; then dd if="$1" bs=1 skip="$2" count="$3" 2>/dev/null | od -An -tx1 | tr -d ' \n'
+  else dd if="$1" bs=1 skip="$2" count="$3" 2>/dev/null | hexdump -v -e '1/1 "%02x"'; fi
+}
 part() { case "$1" in *[0-9]) echo "${1}p$2" ;; *) echo "$1$2" ;; esac; }  # sda2, loop0p2, nvme..
 [ -f "$IMG" ] || die "--image missing or not a file"
 case "$MODE" in qts|raw) ;; *) die "--mode qts|raw required" ;; esac
 
 # --- check the image: uImage magic 27051956, type 4 (multi), fits in the area
-magic=$(dd if="$IMG" bs=4 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')
+magic=$(hex "$IMG" 0 4)
 [ "$magic" = "27051956" ] || die "$IMG is not a uImage (magic $magic)"
-itype=$(dd if="$IMG" bs=1 skip=30 count=1 2>/dev/null | od -An -tu1 | tr -d ' \n')
-[ "$itype" = "4" ] || die "$IMG is uImage type $itype, expected 4 (multi: kernel+initrd)"
+itype=$(hex "$IMG" 30 1)
+[ "$itype" = "04" ] || die "$IMG is uImage type $itype, expected 4 (multi: kernel+initrd)"
 bytes=$(wc -c <"$IMG" | tr -d ' ')
 sectors=$(( (bytes + 511) / 512 ))
 [ "$sectors" -le "$AREA_SECTORS" ] || die "image is $sectors sectors, area holds $AREA_SECTORS"
@@ -44,7 +50,7 @@ sectors=$(( (bytes + 511) / 512 ))
 if [ -z "$DISKS" ]; then
   for d in /sys/block/sd?; do
     [ -e "$d" ] || continue
-    readlink -f "$d/device" | grep -q /usb && continue
+    readlink "$d/device" | grep -q usb && continue
     DISKS="$DISKS ${d##*/}"
   done
 fi
@@ -60,7 +66,7 @@ for dev in $DISKS; do
     pstart=$(cat "$sys/$p2/start"); psize=$(cat "$sys/$p2/size")
     lba=$((pstart + AREA_OFFSET))
     [ $((lba + AREA_SECTORS)) -le $((pstart + psize)) ] || die "$dev: partition 2 too small"
-    grep -qE "^/dev/($p2|md256) " /proc/swaps && die "swap is active on $p2/md256: run 'swapoff -a' first"
+    egrep -q "^/dev/($p2|md256) " /proc/swaps && die "swap is active on $p2/md256: run 'swapoff -a' first"
   else
     lba=$AREA_OFFSET
     for p in "$sys/$dev"*[0-9]; do
@@ -75,8 +81,11 @@ for dev in $DISKS; do
 done
 [ "$LBA" -lt 268435456 ] || die "area beyond LBA28; old U-Boot cannot read it"
 
-printf 'image   %s (%s bytes, %s sectors, multi)\nmode    %s\ndisks  %s\nLBA     %s (0x%x), area %s sectors\n' \
-  "$IMG" "$bytes" "$sectors" "$MODE" "$DISKS" "$LBA" "$LBA" "$AREA_SECTORS"
+LBAHEX=$(echo "$LBA" | awk '{ printf "0x%x", $1 }')
+echo "image   $IMG ($bytes bytes, $sectors sectors, multi)"
+echo "mode    $MODE"
+echo "disks  $DISKS"
+echo "LBA     $LBA ($LBAHEX), area $AREA_SECTORS sectors"
 if [ "$WRITE" != 1 ]; then echo "dry run: add --write to write"; exit 0; fi
 
 pad=/tmp/ts41x-boot.$$
@@ -95,4 +104,4 @@ for dev in $DISKS; do
   fi
 done
 rm -f "$pad"
-printf 'done. U-Boot: ts41x-bootplan.py stage2 --lba 0x%x\n' "$LBA"
+echo "done. U-Boot: ts41x-bootplan.py stage2 --lba $LBAHEX"

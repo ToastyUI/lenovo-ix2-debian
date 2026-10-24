@@ -22,15 +22,17 @@ while [ $# -gt 0 ]; do
   esac
 done
 die() { echo "ERROR: $*" >&2; exit 1; }
+# Must run under QTS's busybox 1.01: no printf applet, no readlink -f, maybe no "command".
+have() { command -v "$1" >/dev/null 2>&1 || which "$1" >/dev/null 2>&1; }
 part() { case "$1" in *[0-9]) echo "${1}p$2" ;; *) echo "$1$2" ;; esac; }  # sda3, loop0p3
 # TS41X_SIM=1: simulation tests on loop disks (tests/run-sim-tests.sh)
 [ -f /etc/config/uLinux.conf ] || [ "${TS41X_SIM:-}" = 1 ] || die "this is not QTS"
 [ "$(id -u)" = 0 ] || die "run as admin (uid 0)"
-for t in mdadm mke2fs tar gzip mount; do command -v $t >/dev/null || die "missing tool: $t"; done
+for t in mdadm mke2fs tar gzip mount awk; do have $t || die "missing tool: $t"; done
 
 if [ -z "$DISKS" ]; then
   for d in /sys/block/sd?; do
-    readlink -f "$d/device" | grep -q usb && continue
+    readlink "$d/device" | grep -q usb && continue
     DISKS="$DISKS ${d##*/}"
   done
 fi
@@ -81,8 +83,8 @@ sed "s|^DISKS=.*|DISKS=\"$(echo $DISKS)\"|" $MNT/etc/ts41x/boot.conf.example >$M
 net=$MNT/etc/systemd/network
 for i in eth0 eth1; do
   [ -r /sys/class/net/$i/address ] || continue
-  printf '[Match]\nOriginalName=%s\n\n[Link]\nMACAddress=%s\nNamePolicy=kernel\n' \
-    "$i" "$(cat /sys/class/net/$i/address)" >"$net/05-ts41x-$i.link"
+  { echo "[Match]"; echo "OriginalName=$i"; echo; echo "[Link]"
+    echo "MACAddress=$(cat /sys/class/net/$i/address)"; echo "NamePolicy=kernel"; } >"$net/05-ts41x-$i.link"
 done
 m2p() { n=0; for o in $(echo "$1" | tr . ' '); do
   case $o in 255) n=$((n+8)) ;; 254) n=$((n+7)) ;; 252) n=$((n+6)) ;; 248) n=$((n+5)) ;;
@@ -93,8 +95,9 @@ addr=$(ifconfig eth0 | sed -n 's/.*inet addr:\([0-9.]*\).*Mask:\([0-9.]*\).*/\1/
 mask=$(ifconfig eth0 | sed -n 's/.*inet addr:\([0-9.]*\).*Mask:\([0-9.]*\).*/\2/p')
 gw=$(route -n 2>/dev/null | awk '$1 == "0.0.0.0" { print $2; exit }')
 if [ "$dhcp" = FALSE ] && [ -n "$addr" ]; then
-  { printf '[Match]\nName=eth0\n\n[Network]\nDHCP=yes\nAddress=%s/%s\n' "$addr" "$(m2p "$mask")"
-    [ -n "$gw" ] && printf 'Gateway=%s\n' "$gw"
+  { echo "[Match]"; echo "Name=eth0"; echo; echo "[Network]"; echo "DHCP=yes"
+    echo "Address=$addr/$(m2p "$mask")"
+    [ -n "$gw" ] && echo "Gateway=$gw"
     awk '/^nameserver/ { print "DNS=" $2 }' /etc/resolv.conf; } >"$net/05-ts41x-eth0.network"
   echo "network: DHCP plus static $addr/$(m2p "$mask") (as on QTS)"
 else
