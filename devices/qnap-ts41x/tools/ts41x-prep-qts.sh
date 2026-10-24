@@ -76,6 +76,30 @@ chmod 600 $MNT/root/.ssh/authorized_keys
 mdadm --detail --brief $MD >>$MNT/etc/mdadm/mdadm.conf
 mkdir -p $MNT/etc/ts41x
 sed "s|^DISKS=.*|DISKS=\"$(echo $DISKS)\"|" $MNT/etc/ts41x/boot.conf.example >$MNT/etc/ts41x/boot.conf
+# Network as on QTS: QTS sets the real MAC at runtime (U-Boot does not), so Debian keeps it via
+# .link files and gets the same DHCP lease. A static QTS address is added next to DHCP.
+net=$MNT/etc/systemd/network
+for i in eth0 eth1; do
+  [ -r /sys/class/net/$i/address ] || continue
+  printf '[Match]\nOriginalName=%s\n\n[Link]\nMACAddress=%s\nNamePolicy=kernel\n' \
+    "$i" "$(cat /sys/class/net/$i/address)" >"$net/05-ts41x-$i.link"
+done
+m2p() { n=0; for o in $(echo "$1" | tr . ' '); do
+  case $o in 255) n=$((n+8)) ;; 254) n=$((n+7)) ;; 252) n=$((n+6)) ;; 248) n=$((n+5)) ;;
+             240) n=$((n+4)) ;; 224) n=$((n+3)) ;; 192) n=$((n+2)) ;; 128) n=$((n+1)) ;; esac
+  done; echo $n; }
+dhcp=$(getcfg eth0 "Use DHCP" -d TRUE 2>/dev/null || echo TRUE)
+addr=$(ifconfig eth0 | sed -n 's/.*inet addr:\([0-9.]*\).*Mask:\([0-9.]*\).*/\1/p')
+mask=$(ifconfig eth0 | sed -n 's/.*inet addr:\([0-9.]*\).*Mask:\([0-9.]*\).*/\2/p')
+gw=$(route -n 2>/dev/null | awk '$1 == "0.0.0.0" { print $2; exit }')
+if [ "$dhcp" = FALSE ] && [ -n "$addr" ]; then
+  { printf '[Match]\nName=eth0\n\n[Network]\nDHCP=yes\nAddress=%s/%s\n' "$addr" "$(m2p "$mask")"
+    [ -n "$gw" ] && printf 'Gateway=%s\n' "$gw"
+    awk '/^nameserver/ { print "DNS=" $2 }' /etc/resolv.conf; } >"$net/05-ts41x-eth0.network"
+  echo "network: DHCP plus static $addr/$(m2p "$mask") (as on QTS)"
+else
+  echo "network: DHCP with the QTS MAC $(cat /sys/class/net/eth0/address) (QTS had $addr)"
+fi
 echo "[5/5] sync $(date +%T)"
 sync; umount $MNT; trap - EXIT
 echo "done. $MD keeps resyncing in the background (hours); that is fine, also across a reboot."
