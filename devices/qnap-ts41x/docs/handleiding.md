@@ -151,8 +151,9 @@ Kies de bron: `--lba 0x…` (ruwe area uit stap 4, QTS-partities blijven heel) o
 `--disk-ext2 0:1` (ext2load van een ext2-partitie, voor een schijf die je helemaal aan Debian geeft).
 
 ```sh
-python3 devices/qnap-ts41x/tools/ts41x-bootplan.py stage2 --env mtd4.after1.bin --lba 0x1035a8 -o stage2.txt
-# of: ... stage2 --env mtd4.after1.bin --disk-ext2 0:1 -o stage2.txt
+python3 devices/qnap-ts41x/tools/ts41x-bootplan.py stage2 --env mtd4.after1.bin --disk-ext2 0:1 -o stage2.txt
+# redundant (boot overleeft een dode schijf): --disk-ext2 0:1 --disk-ext2 1:1
+# of de ruwe-area-route: --lba 0x1035a8
 python3 devices/qnap-ts41x/tools/qnap-uboot-env.py set mtd4.after1.bin -s stage2.txt -o mtd4.stage2.bin
 ssh admin@NAS 'cat > /dev/mtdblock4' < mtd4.stage2.bin
 ```
@@ -169,6 +170,18 @@ cp /etc/ts41x/boot.conf.example /etc/ts41x/boot.conf     # MODE: "ext2" (variant
 mdadm --examine --scan                                    # alleen lezen: welke arrays er zijn
 ```
 
+- **Redundantie (schijf 2 = kopie):** wat je spiegelt bepaalt hoe redundant het is.
+  *Data in RAID 1* → je bestanden staan op beide schijven (de belangrijke mirror). Geef schijf 2
+  dezelfde layout (`BOOT` + `rootfs` + `data`), dan:
+  ```sh
+  mdadm --create /dev/md1 --level=1 --raid-devices=2 /dev/sda3 /dev/sdb3 --metadata=1.2
+  mkfs.ext4 -L nasdata /dev/md1        # mount op /srv/data
+  ```
+  Met `MODE="ext2"` schrijft de hook het boot-image naar **elke** `BOOT`-partitie, en met
+  `--disk-ext2 0:1 --disk-ext2 1:1` boot U-Boot ook van bay 2. De *rootfs* is hiermee niet
+  gespiegeld (bay 1); valt bay 1 uit, dan draait je data door maar boot Debian niet — rootfs +
+  boot-image bouw je in minuten opnieuw. Volledige rootfs-RAID 1 vraagt een initramfs die het
+  array assembleert (apart buildprofiel).
 - **Data van QTS:** QTS-data zit op partitie 3 (md + vaak LVM `vg288/lv1`, ext4). Voeg alleen
   dat array toe aan `/etc/mdadm/mdadm.conf` (`AUTO -all` laat md9/md13/md256/md322 met rust),
   `apt install lvm2` staat er al, mount op `/srv/data`. Eerst read-only proberen.
