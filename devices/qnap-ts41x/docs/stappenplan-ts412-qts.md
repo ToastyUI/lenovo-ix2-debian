@@ -78,15 +78,26 @@ Duurt een paar minuten (200 MB over het netwerk, uitpakken op de NAS). Eindigt m
 `/proc/mdstat` met `md100` aan het synchroniseren. Dat synchroniseren duurt uren en mag gewoon
 doorlopen, ook over een herstart heen.
 
-## 3. Boot-image in partitie 2 (SCHRIJFT p2 van elke schijf; QTS-swap gaat even uit)
+## 3. Boot-image in partitie 2 (SCHRIJFT p2 van elke schijf; QTS-swap gaat uit)
+
+`/tmp` op QTS is een RAM-disk van 32 MB: zet het image op `/mnt/HDA_ROOT` (QTS-systeemvolume,
+honderden MB vrij). Het script maakt daar ook zijn opgevulde kopie.
 
 ```bat
+ssh admin@NAS "rm -f /tmp/boot.uimg; mkdir -p /mnt/HDA_ROOT/ts41x"
 ssh admin@NAS "cat > /tmp/ib.sh" < ts41x-install-boot.sh
-ssh admin@NAS "cat > /tmp/boot.uimg" < boot.uimg
-ssh admin@NAS "swapoff -a; sh /tmp/ib.sh --image /tmp/boot.uimg --mode qts --disks \"sda sdb\""
-ssh admin@NAS "swapoff -a; sh /tmp/ib.sh --image /tmp/boot.uimg --mode qts --disks \"sda sdb\" --write"
+ssh admin@NAS "cat > /mnt/HDA_ROOT/ts41x/boot.uimg" < boot.uimg
+ssh admin@NAS "md5sum /mnt/HDA_ROOT/ts41x/boot.uimg"
+ssh admin@NAS "swapoff -a && cat /proc/swaps && sh /tmp/ib.sh --image /mnt/HDA_ROOT/ts41x/boot.uimg --mode qts --disks \"sda sdb\""
+ssh admin@NAS "sh /tmp/ib.sh --image /mnt/HDA_ROOT/ts41x/boot.uimg --mode qts --disks \"sda sdb\" --write"
 ```
-Noteer de LBA aan het eind (verwacht `0x1035c8` op de TS-412 van de inventaris).
+De md5 moet gelijk zijn aan die van `boot.uimg` op de pc. `/proc/swaps` moet daarna leeg zijn
+(alleen de kopregel); het script weigert zolang er swap actief is. Noteer de LBA aan het eind
+(verwacht `0x1035c8`) en controleer `verified /dev/sda` en `verified /dev/sdb`.
+
+**Direct daarna stap 4 en de herstart**, zonder QTS ertussen opnieuw op te starten: het image staat
+in QTS' swappartitie, en een QTS die weer swap aanzet kan het overschrijven. Bij een terugval naar
+QTS stap 3 dus opnieuw doen.
 
 ## 4. Debian inschakelen (SCHRIJFT de U-Boot-env)
 

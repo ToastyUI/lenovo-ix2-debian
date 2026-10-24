@@ -66,7 +66,9 @@ for dev in $DISKS; do
     pstart=$(cat "$sys/$p2/start"); psize=$(cat "$sys/$p2/size")
     lba=$((pstart + AREA_OFFSET))
     [ $((lba + AREA_SECTORS)) -le $((pstart + psize)) ] || die "$dev: partition 2 too small"
-    egrep -q "^/dev/($p2|md256) " /proc/swaps && die "swap is active on $p2/md256: run 'swapoff -a' first"
+    # QTS swaps on an md over all partitions 2 (md4, md256, ...): refuse any active swap but zram
+    active=$(awk 'NR > 1 && $1 !~ /zram/ { print $1 }' /proc/swaps)
+    [ -z "$active" ] || die "swap is active ($(echo $active)): run 'swapoff -a' first"
   else
     lba=$AREA_OFFSET
     for p in "$sys/$dev"*[0-9]; do
@@ -88,8 +90,9 @@ echo "disks  $DISKS"
 echo "LBA     $LBA ($LBAHEX), area $AREA_SECTORS sectors"
 if [ "$WRITE" != 1 ]; then echo "dry run: add --write to write"; exit 0; fi
 
-pad=/tmp/ts41x-boot.$$
-dd if="$IMG" of="$pad" bs=512 conv=sync 2>/dev/null
+# padded copy next to the image: /tmp on QTS is a 32 MB RAM disk, keep the image on /mnt/HDA_ROOT
+pad=$IMG.pad.$$
+dd if="$IMG" of="$pad" bs=512 conv=sync 2>/dev/null || { rm -f "$pad"; die "cannot write $pad (disk full?)"; }
 for dev in $DISKS; do
   echo "writing /dev/$dev at $LBA"
   dd if="$pad" of="/dev/$dev" bs=512 seek="$LBA" conv=notrunc 2>/dev/null
