@@ -6,7 +6,7 @@
 #
 # Run on an x86/arm64 Debian/Ubuntu host as root, preferably in a throwaway VM/container.
 # Needs: debootstrap, qemu-user-static + binfmt-support (armel chroot), u-boot-tools,
-# device-tree-compiler, zstd. Output in <workdir>/out: rootfs.tar.zst and boot.uimg.
+# device-tree-compiler, zstd. Output in <workdir>/out: rootfs.tar.zst, rootfs.tar.gz (for QTS) and boot.uimg.
 #
 # Services are installed but only the base ones are enabled; transmission, minidlna,
 # WireGuard and the photo SFTP account need site-specific settings first (see docs/handleiding.md).
@@ -60,6 +60,19 @@ install -d -m 700 "$R/root/.ssh"; install -m 600 "$KEYS" "$R/root/.ssh/authorize
 sed -i 's/^COMPRESS=.*/COMPRESS=xz/' "$R/etc/initramfs-tools/initramfs.conf"
 grep -q '^COMPRESS=' "$R/etc/initramfs-tools/initramfs.conf" || echo COMPRESS=xz >>"$R/etc/initramfs-tools/initramfs.conf"
 mkdir -p "$R/srv/data"
+# Optional for a first install without a working key: TS41X_TEMP_ROOTPW=1 sets root/root and
+# allows password login from private addresses only. Remove after the first login (see file).
+if [ "${TS41X_TEMP_ROOTPW:-}" = 1 ]; then
+  echo root:root | chroot "$R" chpasswd
+  cat >"$R/etc/ssh/sshd_config.d/05-temp-root-password.conf" <<P
+# TEMPORARY: root/root over SSH from private addresses only. After the first login:
+#   rm /etc/ssh/sshd_config.d/05-temp-root-password.conf && passwd root && systemctl reload ssh
+Match Address 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    PermitRootLogin yes
+    PasswordAuthentication yes
+P
+  echo "WARNING: temporary root password 'root' enabled for LAN SSH logins"
+fi
 
 echo "[4/8] shared Kirkwood/256 MB tuning from the repo $(date +%T)"
 for f in etc/systemd/zram-generator.conf etc/sysctl.d/90-ix2.conf etc/systemd/journald.conf.d/ix2.conf \
@@ -78,10 +91,14 @@ install -m 755 "$HERE/tools/ts41x-install-boot.sh" "$R/usr/local/sbin/ts41x-inst
 # No /etc/ts41x/boot.conf here on purpose: without it the kernel hook never touches disks,
 # so installing the kernel in this chroot cannot write to the BUILD HOST's disks.
 cp "$R/etc/mdadm/mdadm.conf.example" "$R/etc/mdadm/mdadm.conf"
+# Home LAN for the firewall, e.g. TS41X_LAN=192.168.2.0/24 (without it SSH stays closed)
+if [ -n "${TS41X_LAN:-}" ]; then
+  sed -i "s|^define LAN = .*|define LAN = { $TS41X_LAN }|" "$R/etc/nftables.conf"
+fi
 
 echo "[6/8] services $(date +%T)"
 chroot "$R" systemctl enable systemd-networkd systemd-resolved systemd-timesyncd ssh nftables \
-  smartmontools hd-idle ts41x-picd ts41x-leds ts41x-boot-ok >/dev/null 2>&1
+  smartmontools hd-idle ts41x-picd ts41x-leds ts41x-boot-ok ts41x-ssh-hostkeys >/dev/null 2>&1
 chroot "$R" systemctl disable transmission-daemon minidlna >/dev/null 2>&1 || true
 ln -sf /run/systemd/resolve/stub-resolv.conf "$R/etc/resolv.conf"
 
@@ -97,5 +114,11 @@ dtb=$(find "$R/usr/lib/linux-image-$kver" -name "$DTB" | head -1)
 "$HERE/tools/ts41x-mkimage.sh" "$R/boot/vmlinuz-$kver" "$dtb" "$R/boot/initrd.img-$kver" "$OUT/boot.uimg" "Debian $kver"
 chroot "$R" apt-get clean
 rm -rf "$R/var/lib/apt/lists/"* "$R/usr/share/doc/"* "$R/usr/share/man/"*
+# The tarball is shared between units: no SSH host keys (ts41x-ssh-hostkeys makes them on
+# first boot) and an empty machine-id (systemd fills it on first boot).
+rm -f "$R"/etc/ssh/ssh_host_*; : >"$R/etc/machine-id"
 tar -C "$R" --numeric-owner -cf - . | zstd -q -T0 -o "$OUT/rootfs.tar.zst"
+# .tar.gz for unpacking on stock QTS, whose busybox tar has no zstd
+tar -C "$R" --numeric-owner -cf - . | gzip -6 >"$OUT/rootfs.tar.gz"
+(cd "$OUT" && sha256sum boot.uimg rootfs.tar.zst rootfs.tar.gz >SHA256SUMS)
 ls -l "$OUT"

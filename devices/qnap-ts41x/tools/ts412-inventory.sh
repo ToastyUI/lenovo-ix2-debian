@@ -59,6 +59,14 @@ have pvs && run lvm.txt sh -c 'pvs; vgs; lvs'
 run mounts.txt cat /proc/mounts
 run df.txt df -h
 
+log "tools (for preparing a disk from QTS without a dock)"
+for t in sfdisk sgdisk parted fdisk mke2fs mkfs.ext2 mkfs.ext4 tune2fs blkid blockdev partprobe \
+         tar gzip gunzip zstd xz dd sync swapoff mdadm python python3; do
+  printf '%s %s\n' "$t" "$(command -v "$t" 2>/dev/null || echo -)"
+done >"$OUT/tools.txt" 2>&1
+have mke2fs && run mke2fs-version.txt mke2fs -V
+have busybox && run busybox.txt busybox
+
 log "packing"
 (cd /tmp && tar cf - "${OUT##*/}") || log "tar failed"
 rm -rf "$OUT"
