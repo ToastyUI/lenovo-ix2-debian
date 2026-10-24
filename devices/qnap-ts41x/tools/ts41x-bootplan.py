@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the U-Boot env changes for booting Debian from disk with a QTS fallback.
+"""Generate the U-Boot env changes for booting Debian (USB and/or disk) with a QTS fallback.
 
 Every stage writes a changes file in fw_setenv -s format (name=value), which you
 apply to an mtd4 dump with qnap-uboot-env.py on a PC, or with fw_setenv -s on Debian.
@@ -10,12 +10,17 @@ apply to an mtd4 dump with qnap-uboot-env.py on a PC, or with fw_setenv -s on De
 
   ts41x-bootplan.py stage1 --env mtd4.bin -o stage1.txt
   ts41x-bootplan.py stage2 --env mtd4.bin --lba 0x1035a8 [--pic-led] -o stage2.txt
+  ts41x-bootplan.py stage2 --env mtd4.bin --usb [--lba 0x1035a8] -o stage2.txt
+
+Boot order in stage2: USB stick (--usb: ext2load of /boot.uimg from partition 1, an ext2
+filesystem) -> disks (--lba: raw area written by ts41x-install-boot.sh) -> QTS from flash.
+Use --usb only when ts412-analyze.py found "usb" and "ext2load" in this U-Boot.
 
 How the one-shot guard works (stage2):
   bootcmd=run bootcmd_debian
   bootcmd_debian first sets bootcmd back to "run bootcmd_fallback" and runs saveenv,
-  THEN reads the multi-image from disk and runs bootm. If bootm returns (no disk, bad
-  CRC) it falls through to QTS in the same boot. If Debian hangs, the next power
+  THEN tries each source and runs bootm. If bootm returns (no stick, no disk, bad CRC)
+  the next source is tried, and finally QTS in the same boot. If Debian hangs, the next power
   cycle boots QTS, because the env already says so. Only Debian itself re-arms
   (ts41x-boot-ok.service, after a complete boot).
 """
@@ -56,7 +61,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("stage", choices=["stage1", "stage2", "restore"])
     ap.add_argument("--env", required=True, help="raw dump of mtd4 (U-Boot Config)")
-    ap.add_argument("--lba", help="first sector of the boot area (from ts412-analyze.py / ts41x-install-boot.sh)")
+    ap.add_argument("--lba", help="first sector of the disk boot area (from ts412-analyze.py / ts41x-install-boot.sh)")
+    ap.add_argument("--usb", action="store_true", help="try /boot.uimg on the USB stick's first partition (ext2) first")
     ap.add_argument("--pic-led", action="store_true", help="add uart1 LED feedback (only if the analyzer found uart1)")
     ap.add_argument("--force", action="store_true", help="accept a bootcmd that does not look stock")
     ap.add_argument("-o", "--output", required=True)
@@ -81,17 +87,28 @@ def main():
         if env.get("ts_probe_saveenv") != "ok" and not a.force:
             sys.exit(f"ts_probe_saveenv={env.get('ts_probe_saveenv')!r}: saveenv not proven to persist; "
                      "without it the one-shot guard does not work. Stop here.")
-        if not a.lba or not re.fullmatch(r"0x[0-9a-fA-F]+", a.lba):
-            sys.exit("--lba 0x... is required (hex, as printed by the analyzer/installer)")
-        if int(a.lba, 16) >= 1 << 28:
+        if not a.usb and not a.lba:
+            sys.exit("give --usb, --lba 0x..., or both")
+        if a.lba and not re.fullmatch(r"0x[0-9a-fA-F]+", a.lba):
+            sys.exit("--lba must be hex, as printed by the analyzer/installer (e.g. 0x1035a8)")
+        if a.lba and int(a.lba, 16) >= 1 << 28:
             sys.exit("boot area beyond LBA28 (128 GiB): old U-Boot IDE code may not reach it")
         led = LED_TRYING if a.pic_led else ""
+        chain = ["setenv bootcmd run bootcmd_fallback", "saveenv"] + ([led.strip("; ")] if led else [])
         out += [("bootcmd_fallback", "setenv bootargs $(bootargs_stock); run bootcmd_stock"),
-                ("bootcmd_debian", "setenv bootcmd run bootcmd_fallback; saveenv; run ts_load; run ts_boot; "
-                                   "run bootcmd_fallback"),
-                ("ts_load", f"{led}ide reset; mw {LOAD_ADDR} 0 1; ide read {LOAD_ADDR} {a.lba[2:]} {AREA_SECTORS[2:]}"),
-                ("ts_boot", f"setenv bootargs {DEBIAN_ARGS}; bootm {LOAD_ADDR}"),
-                ("ts_boot_lba", a.lba),
+                ("ts_boot", f"setenv bootargs {DEBIAN_ARGS}; bootm {LOAD_ADDR}")]
+        if a.usb:
+            # usb stop afterwards: leave the controller as QTS expects it if we fall through
+            out.append(("ts_usb", f"usb reset; mw {LOAD_ADDR} 0 1; ext2load usb 0:1 {LOAD_ADDR} /boot.uimg; "
+                                  "run ts_boot; usb stop"))
+            chain.append("run ts_usb")
+        if a.lba:
+            out.append(("ts_hdd", f"ide reset; mw {LOAD_ADDR} 0 1; ide read {LOAD_ADDR} {a.lba[2:]} {AREA_SECTORS[2:]}; "
+                                  "run ts_boot"))
+            out.append(("ts_boot_lba", a.lba))
+            chain.append("run ts_hdd")
+        chain.append("run bootcmd_fallback")
+        out += [("bootcmd_debian", "; ".join(chain)),
                 ("ts_probe_saveenv", None),
                 ("bootcmd", "run bootcmd_debian")]
     else:  # restore
@@ -99,11 +116,11 @@ def main():
             if need not in env:
                 sys.exit(f"{need} missing: nothing to restore from")
         out += [("bootcmd", env["bootcmd_stock"]), ("bootargs", env["bootargs_stock"])]
-        out += [(k, None) for k in ("bootcmd_fallback", "bootcmd_debian", "ts_load", "ts_boot", "ts_boot_lba",
-                                    "ts_probe_saveenv",
+        out += [(k, None) for k in ("bootcmd_fallback", "bootcmd_debian", "ts_usb", "ts_hdd", "ts_boot",
+                                    "ts_boot_lba", "ts_probe_saveenv",
                                     "ts_last_ok", "bootcmd_stock", "bootargs_stock")]
     for k, v in out:
-        if v is not None and (k.startswith("bootcmd") or k in ("ts_load", "ts_boot")) and len(v) > MAX_CMD:
+        if v is not None and (k.startswith("bootcmd") or k in ("ts_usb", "ts_hdd", "ts_boot")) and len(v) > MAX_CMD:
             sys.exit(f"{k} is {len(v)} chars; keep executed commands under {MAX_CMD} for old U-Boot")
     write(a.output, out)
 

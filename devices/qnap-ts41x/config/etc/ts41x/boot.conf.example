@@ -1,7 +1,9 @@
 # Copy to /etc/ts41x/boot.conf. Used by ts41x-update-boot after every kernel/initramfs update.
-# MODE=qts : boot area inside partition 2 (QTS swap) of each disk, QTS data and fallback untouched
-# MODE=raw : boot area before partition 1 on disks partitioned by this project
-MODE=qts
+# One or more of (space separated, same order as stage2 of ts41x-bootplan.py):
+#   usb : /boot.uimg on the USB stick's ext2 partition labelled BOOT (bootplan --usb)
+#   qts : boot area inside partition 2 (QTS swap) of each disk, QTS data untouched (bootplan --lba)
+#   raw : boot area before partition 1 on disks partitioned by this project (bootplan --lba)
+MODE="usb"
 # Empty = every non-USB sd? disk. List all bays that should be able to boot.
 DISKS=""
 DTB=kirkwood-ts419-6281.dtb

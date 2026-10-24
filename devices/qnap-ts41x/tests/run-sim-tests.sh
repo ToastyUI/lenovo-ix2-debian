@@ -37,7 +37,12 @@ python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/s1.bin" --lba 0x800 -o "$T
 printf 'ts_probe_saveenv=ok\nbootcmd=run bootcmd_stock\n' >"$T/sim.txt"   # what U-Boot's probe does
 python3 "$K/tools/qnap-uboot-env.py" set "$T/s1.bin" -s "$T/sim.txt" -o "$T/ok.bin" 2>/dev/null
 python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" --lba 0x1035a8 -o "$T/s2.txt" 2>/dev/null && ok "stage2 generated"
-awk -F= '/^(bootcmd|ts_load|ts_boot)/{ if (length($0)-length($1)-1 > 200) exit 1 }' "$T/s2.txt" && ok "executed vars <= 200 chars" || bad "command too long"
+awk -F= '/^(bootcmd|ts_hdd|ts_boot)/{ if (length($0)-length($1)-1 > 200) exit 1 }' "$T/s2.txt" && ok "executed vars <= 200 chars" || bad "command too long"
+python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" --usb --lba 0x1035a8 --pic-led -o "$T/s2u.txt" 2>/dev/null \
+  && grep -q '^bootcmd_debian=setenv bootcmd run bootcmd_fallback; saveenv; uart1 0x58; run ts_usb; run ts_hdd; run bootcmd_fallback$' "$T/s2u.txt" \
+  && ok "stage2 --usb --lba: disarm, then USB, then disks, then QTS" || bad "usb chain"
+awk -F= '/^(bootcmd|ts_usb|ts_hdd|ts_boot)/{ if (length($0)-length($1)-1 > 200) exit 1 }' "$T/s2u.txt" && ok "usb chain vars <= 200 chars" || bad "usb chain too long"
+python3 "$K/tools/ts41x-bootplan.py" stage2 --env "$T/ok.bin" -o "$T/x" 2>/dev/null && bad "stage2 without source accepted" || ok "stage2 refused without --usb/--lba"
 python3 "$K/tools/qnap-uboot-env.py" set "$T/ok.bin" -s "$T/s2.txt" -o "$T/s2.bin" 2>/dev/null
 python3 "$K/tools/ts41x-bootplan.py" restore --env "$T/s2.bin" -o "$T/r.txt" 2>/dev/null
 python3 "$K/tools/qnap-uboot-env.py" set "$T/s2.bin" -s "$T/r.txt" -o "$T/r.bin" 2>/dev/null

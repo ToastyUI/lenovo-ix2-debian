@@ -168,7 +168,7 @@ def main():
           f"{'' if a else '  (needs ide + saveenv + multi-image + valid env)'}")
     if a and not feats.get("sata pci"):
         print("         note: no 88SX7042 strings found; U-Boot may not see the PCIe SATA bays at all")
-    print(f"Route A' (ix2-style USB boot):              {'worth trying' if u else 'NOT possible'}")
+    print(f"Route A' (USB first, like the ix2):         {'worth trying (ts41x-bootplan.py stage2 --usb)' if u else 'NOT possible'}")
     print("Route B  (Debian in flash via qnap_mtd_resize): possible (TS-412 success reported upstream),")
     print("         but needs a kernel under 3 MiB; this repo's 7.1.9 zImage is 4.8 MiB (docs/kernel.md)")
     print(f"PIC LED feedback from U-Boot (uart1):     {'yes' if feats.get('uart1') else 'no'}")

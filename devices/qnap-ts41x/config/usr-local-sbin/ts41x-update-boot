@@ -26,6 +26,20 @@ done
 [ -n "$dtb" ] || { echo "ts41x-update-boot: $DTB not found for $kver" >&2; exit 1; }
 img=/boot/ts41x-boot-$kver.uimg
 /usr/local/sbin/ts41x-mkimage "$zimg" "$dtb" "$initrd" "$img" "Debian $kver" >/dev/null
-/usr/local/sbin/ts41x-install-boot --image "$img" --mode "$MODE" ${DISKS:+--disks "$DISKS"} --write
+for m in $MODE; do
+  case "$m" in
+    usb)  # /boot.uimg on the stick's ext2 partition labelled BOOT (read by U-Boot's ext2load)
+      dev=$(blkid -L BOOT) || { echo "ts41x-update-boot: no partition labelled BOOT" >&2; exit 1; }
+      mnt=$(findmnt -n -o TARGET -S "$dev" | head -1)
+      if [ -z "$mnt" ]; then mnt=/run/ts41x-bootpart; mkdir -p "$mnt"; mount -t ext2 "$dev" "$mnt"; tmpmnt=1; fi
+      cp "$img" "$mnt/boot.uimg.new" && sync && mv "$mnt/boot.uimg.new" "$mnt/boot.uimg" && sync
+      cmp -s "$img" "$mnt/boot.uimg" || { echo "ts41x-update-boot: verify of $dev failed" >&2; exit 1; }
+      [ -n "${tmpmnt:-}" ] && umount "$mnt"
+      echo "boot image copied to $dev:/boot.uimg" ;;
+    qts|raw)
+      /usr/local/sbin/ts41x-install-boot --image "$img" --mode "$m" ${DISKS:+--disks "$DISKS"} --write ;;
+    *) echo "ts41x-update-boot: unknown MODE '$m'" >&2; exit 1 ;;
+  esac
+done
 ln -sf "${img##*/}" /boot/ts41x-boot.uimg
 logger -t ts41x-update-boot "boot image for $kver written ($MODE)"

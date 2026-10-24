@@ -1,7 +1,7 @@
 # QNAP TS-41x (TS-410 / TS-412 / TS-419P / TS-419U)
 
-Debian 13 armel on the QNAP TS-41x, booted from the disks by the stock U-Boot, with stock QTS
-kept in flash as an automatic fallback. Same rootfs, kernel configs and tuning as the ix2-ng
+Debian 13 armel on the QNAP TS-41x, booted by the stock U-Boot from a USB stick and/or the
+disks, with stock QTS kept in flash as an automatic fallback. Same rootfs, kernel configs and tuning as the ix2-ng
 in the top-level of this repository.
 
 **Status: kit, tested in simulation, not yet booted on a TS-412.** See "Tested" below.
@@ -12,8 +12,8 @@ Step-by-step guide (Dutch): [docs/handleiding.md](docs/handleiding.md).
 | Hardware | Marvell 88F6281 1.2 GHz (ARMv5TE), 256 MB (TS-412) / 512 MB (TS-419P), 16 MB SPI NOR, 4 bays on a PCIe Marvell 88SX7042, PIC microcontroller on `/dev/ttyS1` |
 | DTB | `kirkwood-ts419-6281.dtb` (mainline; no bodhi patch needed) |
 | Kernel | vanilla 7.1.9 + `kernel/config-7.1.9-ix2c-1` (or `-ix2perf-1` for B) |
-| Boot | U-Boot reads one multi-image (zImage+DTB+initramfs) with `ide read` from partition 2 (QTS swap) of every disk; one-shot guard falls back to QTS |
-| Rootfs | USB stick, label `rootfs` |
+| Boot | U-Boot loads one multi-image (zImage+DTB+initramfs): first `ext2load` of `/boot.uimg` from the USB stick, then `ide read` from partition 2 (QTS swap) of every disk, then QTS from flash; one-shot guard |
+| Rootfs | USB stick: partition 1 ext2 `BOOT` (boot image), partition 2 ext4 `rootfs` |
 | LEDs/fan/power | `ts41x-pic` / `ts41x-picd` (byte codes from qcontrol); `qnap-poweroff` in the kernel cuts power |
 
 ## Layout
@@ -43,12 +43,13 @@ often 256).
 
 ## Tested (simulation)
 
-Reproduce with `sudo tests/run-sim-tests.sh path/to/kirkwood-ts419-6281.dtb` (16 checks).
+Reproduce with `sudo tests/run-sim-tests.sh path/to/kirkwood-ts419-6281.dtb` (19 checks).
 
 - `qnap-uboot-env.py`: reads an env written by libubootenv's `fw_setenv` exactly as `fw_printenv`
   does (checked with the published TS-419P dump in qnap_mtd_resize and with the synthetic env in the tests); its own output is read back correctly by `fw_printenv`; corrupt dumps refused;
   bytes after the env area untouched.
 - `ts41x-bootplan.py`: refuses stage2 without stage1, refuses while the saveenv probe is pending,
+  generates the USB -> disks -> QTS chain with every executed variable under 200 characters,
   `restore` gives back exactly the original set of variables.
 - `ts41x-install-boot.sh` under busybox sh on four loop disks with the QTS partition layout: same
   LBA as the analyzer, read-back verified, refuses overlapping partitions, differing layouts,
@@ -61,10 +62,15 @@ Reproduce with `sudo tests/run-sim-tests.sh path/to/kirkwood-ts419-6281.dtb` (16
   rootfs 515 MB unpacked / 200 MB as .tar.zst, boot image 14.5 MiB (zImage 4.8 MiB + xz
   initramfs 9.7 MiB, well inside the 48 MiB area). The DTB in the image carries the U-Boot
   read-only flag; the kernel hook correctly refused to touch disks inside the build chroot.
+- With `MODE="usb"` the kernel hook, run inside that armel rootfs (qemu-user) with only the board
+  check redirected, rebuilt the image and copied it to a loop stick's ext2 `BOOT` partition, verified.
+- U-Boot 1.1.4 source: `usb reset`/`usb start`/`usb stop` exist, and its ext2 code assumes
+  128-byte inodes (hence `mkfs.ext2 -I 128`).
 
 ## Not tested
 
-Booting on real hardware; whether U-Boot sees the PCIe bays; whether `saveenv` persists
+Booting on real hardware; whether this unit's U-Boot has `usb`/`ext2load` and reads the stick;
+whether U-Boot sees the PCIe bays; whether `saveenv` persists
 (stage1 checks it safely); whether the PIC sends temperatures unsolicited.
 
 ## Credits
