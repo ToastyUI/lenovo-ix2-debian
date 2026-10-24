@@ -79,14 +79,34 @@ sudo devices/qnap-ts41x/build-rootfs.sh /root/ts41x/kernel/out/linux-image-*.deb
 
 Uitvoer in `/root/ts41x/out`: `rootfs.tar.zst` en `boot.uimg`.
 
-USB-stick klaarmaken voor de rootfs (controleer `sdX`!):
+Twee manieren, afhankelijk van of je een USB-stick wilt gebruiken.
+
+**A. Zonder stick (lege schijven) — aanbevolen.** Prepareer een schijf op je PC in een
+SATA-dock. `/dev/sdX` = die schijf; alles erop wordt gewist.
+
+```sh
+sudo sfdisk /dev/sdX <<'P'
+label: gpt
+start=2048, size=128MiB, name=BOOT
+name=rootfs, size=16GiB
+name=data
+P
+sudo mkfs.ext2 -I 128 -L BOOT /dev/sdX1     # U-Boot 1.1.4 ext2 verwacht 128-byte inodes
+sudo mkfs.ext4 -L rootfs      /dev/sdX2
+sudo mount /dev/sdX1 /mnt && sudo cp /root/ts41x/out/boot.uimg /mnt/boot.uimg && sudo umount /mnt
+sudo mount /dev/sdX2 /mnt && sudo tar -C /mnt -xf /root/ts41x/out/rootfs.tar.zst && sudo umount /mnt
+```
+
+Schijf terug in **bay 1**. Stap 4 vervalt (het boot-image staat al op de `BOOT`-partitie);
+in stap 5 gebruik je `--disk-ext2 0:1`. De `data`-partitie voeg je later vanuit Debian samen
+met de andere bays tot een RAID.
+
+**B. Met stick** (rootfs op USB, boot-image in de ruwe schijf-area via stap 4):
 
 ```sh
 sudo mkfs.ext4 -L rootfs /dev/sdX1
 sudo mount /dev/sdX1 /mnt && sudo tar -C /mnt -xf /root/ts41x/out/rootfs.tar.zst && sudo umount /mnt
 ```
-
-Het boot-image komt niet op de stick maar op een schijf (stap 4).
 
 ## 3. Probe: blijft `saveenv` bewaard? (fase 1)
 
@@ -145,7 +165,7 @@ Kwam QTS terug? Dan lukte de poging niet. Debian probeert het niet opnieuw tot j
 ## 6. Op Debian instellen
 
 ```sh
-cp /etc/ts41x/boot.conf.example /etc/ts41x/boot.conf     # MODE="qts" (ruwe area) of "raw", gelijk aan stage2
+cp /etc/ts41x/boot.conf.example /etc/ts41x/boot.conf     # MODE: "ext2" (variant A), "qts" (ruwe area), gelijk aan stage2
 mdadm --examine --scan                                    # alleen lezen: welke arrays er zijn
 ```
 

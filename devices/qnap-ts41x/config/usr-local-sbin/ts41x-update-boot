@@ -28,7 +28,8 @@ img=/boot/ts41x-boot-$kver.uimg
 /usr/local/sbin/ts41x-mkimage "$zimg" "$dtb" "$initrd" "$img" "Debian $kver" >/dev/null
 for m in $MODE; do
   case "$m" in
-    usb)  # /boot.uimg on the stick's ext2 partition labelled BOOT (read by U-Boot's ext2load)
+    usb|ext2)  # /boot.uimg on the ext2 partition labelled BOOT (a USB stick, or a SATA disk),
+          # read by U-Boot's ext2load usb / ext2load ide
       dev=$(blkid -L BOOT) || { echo "ts41x-update-boot: no partition labelled BOOT" >&2; exit 1; }
       mnt=$(findmnt -n -o TARGET -S "$dev" | head -1)
       if [ -z "$mnt" ]; then mnt=/run/ts41x-bootpart; mkdir -p "$mnt"; mount -t ext2 "$dev" "$mnt"; tmpmnt=1; fi
