@@ -33,7 +33,7 @@ UBOOT_FEATURES = {
     "multi":    [r"Multi-File Image"],
     "uart1":    [r"\buart1\b"],
     "bootm":    [r"\bbootm\b"],
-    "run":      [r"\brun var"],
+    "run":      [r"\brun var", r"run +- run commands"],
 }
 
 
