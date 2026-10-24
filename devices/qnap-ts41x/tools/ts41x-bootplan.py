@@ -49,6 +49,9 @@ MAX_CMD = 200
 STOCK_PATTERN = re.compile(r"cp\.[bl] 0xf82\d+ 0x800000 .*bootm 0x800000")
 
 LED_TRYING = "uart1 0x58; "  # status LED green/red alternating 2 Hz while U-Boot tries Debian
+# PIC watchdog off (qcontrol code 0x67). QTS keeps the PIC watchdog fed; a Debian that does not
+# know about it gets power-cycled about a minute after boot, before userspace can turn it off.
+PIC_WDT_OFF = "uart1 0x67"
 
 
 def write(path, lines):
@@ -73,6 +76,9 @@ def main():
                     help="try /boot.uimg from USB first. NOTE: the stock TS-41x U-Boot has no 'usb' command "
                          "(GPL source, docs/uboot-analysis.md), so this only works on a reflashed/custom U-Boot.")
     ap.add_argument("--pic-led", action="store_true", help="add uart1 LED feedback (only if the analyzer found uart1)")
+    ap.add_argument("--extra-args", default="", help="appended to the Debian kernel command line")
+    ap.add_argument("--pic-wdt-off", action="store_true",
+                    help="send the PIC watchdog-off code (uart1 0x67) before trying Debian")
     ap.add_argument("--force", action="store_true", help="accept a bootcmd that does not look stock")
     ap.add_argument("-o", "--output", required=True)
     a = ap.parse_args()
@@ -110,9 +116,10 @@ def main():
         if a.lba and int(a.lba, 16) >= 1 << 28:
             sys.exit("boot area beyond LBA28 (128 GiB): old U-Boot IDE code may not reach it")
         led = LED_TRYING if a.pic_led else ""
-        chain = ["setenv bootcmd run bootcmd_fallback", "saveenv"] + ([led.strip("; ")] if led else [])
+        chain = ["setenv bootcmd run bootcmd_fallback", "saveenv"] + ([PIC_WDT_OFF] if a.pic_wdt_off else []) \
+            + ([led.strip("; ")] if led else [])
         out += [("bootcmd_fallback", "setenv bootargs $(bootargs_stock); run bootcmd_stock"),
-                ("ts_boot", f"setenv bootargs {DEBIAN_ARGS}; bootm {LOAD_ADDR}")]
+                ("ts_boot", f"setenv bootargs {DEBIAN_ARGS}{' ' + a.extra_args if a.extra_args else ''}; bootm {LOAD_ADDR}")]
         if a.usb:
             # usb stop afterwards: leave the controller as QTS expects it if we fall through
             out.append(("ts_usb", f"usb reset; mw {LOAD_ADDR} 0 1; ext2load usb 0:1 {LOAD_ADDR} /boot.uimg; "
