@@ -102,12 +102,33 @@ De SSH-host-key is nieuw: verwijder de oude regel met `ssh-keygen -R NAS`.
 ```bat
 ssh root@NAS
 ```
-Met de sleutel uit QTS' `authorized_keys`, of tijdelijk wachtwoord `root` (alleen vanaf het LAN). Daarna direct:
+Met de sleutel uit QTS' `authorized_keys`, of tijdelijk wachtwoord `root` (alleen vanaf het LAN).
 
+**SSH (poort 22) mag nooit dicht.** Er is geen seriële console: zonder SSH kom je er niet meer in.
+Nooit `systemctl stop/restart ssh`, nooit de firewall herladen zonder `nft -c` vooraf. Het tijdelijke
+wachtwoord gaat pas weg als de sleutel aantoonbaar werkt:
+
+1. Laat de eerste sessie open staan.
+2. Test in een **tweede** venster dat de sleutel werkt, zonder wachtwoord:
+   ```bat
+   ssh -o PasswordAuthentication=no -o BatchMode=yes root@NAS "echo SLEUTEL-OK"
+   ```
+   Geen `SLEUTEL-OK`? Stop hier, laat het wachtwoord staan en zet eerst de sleutel goed.
+3. Pas dan, in de eerste sessie:
+   ```sh
+   mv /etc/ssh/sshd_config.d/05-temp-root-password.conf /root/05-temp-root-password.conf.off
+   sshd -t && systemctl reload ssh      # reload: poort 22 blijft open, sessies blijven
+   passwd root                          # nieuw, sterk wachtwoord (alleen nog lokaal bruikbaar)
+   ```
+4. Test opnieuw stap 2 in een nieuw venster. Werkt het niet: in de nog open eerste sessie
+   `mv /root/05-temp-root-password.conf.off /etc/ssh/sshd_config.d/05-temp-root-password.conf && systemctl reload ssh`.
+
+Controle:
 ```sh
-rm /etc/ssh/sshd_config.d/05-temp-root-password.conf && passwd root && systemctl reload ssh
+systemctl is-active ssh; ss -ltn | grep ':22 '; systemctl show ssh -p OOMScoreAdjust -p Restart
 cat /proc/mdstat; df -h /; uname -r
 ```
+Verwacht: `active`, poort 22 luistert, `OOMScoreAdjust=-1000`, `Restart=always`.
 
 Kwam QTS terug in plaats van Debian? Dan is de poging mislukt en draait QTS gewoon. Niets is
 kwijt. Lever `ssh admin@NAS "cat /dev/mtdblock4" > mtd4.after2.bin` en `dmesg` aan.
