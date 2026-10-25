@@ -1,0 +1,9 @@
+#!/bin/sh
+# Root file system mounted -> long beep, status LED solid green (ts41x-boot-ok beeps again when up).
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0 ;; esac
+[ -c /dev/ttyS1 ] || exit 0
+stty -F /dev/ttyS1 19200 cs8 -cstopb -parenb raw -echo 2>/dev/null || exit 0
+printf '\121\126' >/dev/ttyS1        # 0x51 long beep, 0x56 green
+exit 0

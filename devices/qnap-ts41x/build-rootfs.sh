@@ -84,7 +84,8 @@ echo "[5/8] TS-41x files $(date +%T)"
 (cd "$HERE/config" && find etc -type f) | while read -r f; do
   install -D -m 644 "$HERE/config/$f" "$R/$f"
 done
-chmod 755 "$R/etc/kernel/postinst.d/zz-ts41x-boot" "$R/etc/initramfs/post-update.d/ts41x-boot"
+chmod 755 "$R/etc/kernel/postinst.d/zz-ts41x-boot" "$R/etc/initramfs/post-update.d/ts41x-boot" \
+  "$R/etc/initramfs-tools/hooks/ts41x-pic" "$R"/etc/initramfs-tools/scripts/*/ts41x-pic
 install -m 755 "$HERE"/config/usr-local-sbin/* "$R/usr/local/sbin/"
 install -m 755 "$HERE/tools/ts41x-mkimage.sh" "$R/usr/local/sbin/ts41x-mkimage"
 install -m 755 "$HERE/tools/ts41x-install-boot.sh" "$R/usr/local/sbin/ts41x-install-boot"
