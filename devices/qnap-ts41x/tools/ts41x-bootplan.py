@@ -53,8 +53,11 @@ MAX_CMD = 200
 STOCK_PATTERN = re.compile(r"cp\.[bl] 0xf82\d+ 0x800000 .*bootm 0x800000")
 
 LED_TRYING = "uart1 0x58; "  # status LED green/red alternating 2 Hz while U-Boot tries Debian
-# PIC watchdog off (qcontrol code 0x67). QTS keeps the PIC watchdog fed; a Debian that does not
-# know about it gets power-cycled about a minute after boot, before userspace can turn it off.
+# PIC watchdog codes, from QTS's own scripts (mtd2): /etc/init.d/reboot "pic_raw 104 #enable pic watch
+# dog timer 5 min", init_hardware.sh "pic_raw 103 # disable pic watch dog". The stock bootcmd sends
+# 0x68 too. Keep it ON for a Debian attempt: a hang anywhere is reset into QTS after 5 minutes;
+# ts41x-boot-ok turns it off once Debian is up. 0x67 here removes that safety net.
+PIC_WDT_ON = "uart1 0x68"
 PIC_WDT_OFF = "uart1 0x67"
 
 
@@ -83,8 +86,10 @@ def main():
     ap.add_argument("--extra-args", default="", help="appended to the Debian kernel command line")
     ap.add_argument("--set", metavar="NAME=VALUE", action="append", default=[],
                     help="also set this env variable in stage2, e.g. ethaddr=00:08:9B:D0:24:DC")
+    ap.add_argument("--pic-wdt-on", action="store_true",
+                    help="arm the 5-minute PIC watchdog (uart1 0x68) before trying Debian (recommended)")
     ap.add_argument("--pic-wdt-off", action="store_true",
-                    help="send the PIC watchdog-off code (uart1 0x67) before trying Debian")
+                    help="send PIC watchdog OFF (uart1 0x67): no automatic recovery if Debian hangs")
     ap.add_argument("--force", action="store_true", help="accept a bootcmd that does not look stock")
     ap.add_argument("-o", "--output", required=True)
     a = ap.parse_args()
@@ -122,7 +127,7 @@ def main():
         if a.lba and int(a.lba, 16) >= 1 << 28:
             sys.exit("boot area beyond LBA28 (128 GiB): old U-Boot IDE code may not reach it")
         led = LED_TRYING if a.pic_led else ""
-        chain = ["setenv bootcmd run bootcmd_fallback", "saveenv"] + ([PIC_WDT_OFF] if a.pic_wdt_off else []) \
+        chain = ["setenv bootcmd run bootcmd_fallback", "saveenv"] + ([PIC_WDT_ON] if a.pic_wdt_on else []) + ([PIC_WDT_OFF] if a.pic_wdt_off else []) \
             + ([led.strip("; ")] if led else [])
         out += [("bootcmd_fallback", "setenv bootargs $(bootargs_stock); run bootcmd_stock"),
                 ("ts_boot", f"setenv bootargs {DEBIAN_ARGS}{' ' + a.extra_args if a.extra_args else ''}; bootm {LOAD_ADDR}")]

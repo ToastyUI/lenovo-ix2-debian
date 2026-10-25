@@ -1,10 +1,11 @@
 #!/bin/sh
 # Proof of life without a serial console: the initramfs runs -> short beep, status LED blinks green.
-# Also switches the PIC watchdog off (0x67), as Debian's qcontrol initramfs hook does.
+# The PIC watchdog stays ON here: QTS's reboot script and bootcmd_debian arm it (0x68, 5 min), so a
+# Debian that hangs anywhere before ts41x-boot-ok is reset into QTS. ts41x-boot-ok switches it off.
 PREREQ=""
 prereqs() { echo "$PREREQ"; }
 case "$1" in prereqs) prereqs; exit 0 ;; esac
 [ -c /dev/ttyS1 ] || exit 0
 stty -F /dev/ttyS1 19200 cs8 -cstopb -parenb raw -echo 2>/dev/null || exit 0
-printf '\147\120\132' >/dev/ttyS1    # 0x67 watchdog off, 0x50 short beep, 0x5a green blink
+printf '\120\132' >/dev/ttyS1        # 0x50 short beep, 0x5a green blink
 exit 0
