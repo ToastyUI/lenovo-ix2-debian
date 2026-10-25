@@ -1,0 +1,8 @@
+#!/bin/sh
+# stty and printf for the PIC proof-of-life beeps (scripts/*/ts41x-pic)
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0 ;; esac
+. /usr/share/initramfs-tools/hook-functions
+copy_exec /usr/bin/stty /bin
+copy_exec /usr/bin/printf /bin

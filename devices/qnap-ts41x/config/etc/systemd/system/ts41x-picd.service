@@ -1,0 +1,9 @@
+[Unit]
+Description=QNAP TS-41x PIC listener (power button, fan, temperature)
+After=dev-ttyS1.device
+[Service]
+ExecStart=/usr/local/sbin/ts41x-picd
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

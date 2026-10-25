@@ -1,0 +1,11 @@
+# WireGuard for the phone (photo upload from outside). Forward UDP 51820 on the router.
+[NetDev]
+Name=wg0
+Kind=wireguard
+[WireGuard]
+ListenPort=51820
+PrivateKeyFile=/etc/systemd/network/wg0.key
+[WireGuardPeer]
+# phone
+PublicKey=PHONE_PUBLIC_KEY
+AllowedIPs=198.51.100.2/32

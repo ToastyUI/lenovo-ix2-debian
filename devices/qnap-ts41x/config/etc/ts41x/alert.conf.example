@@ -1,0 +1,2 @@
+# Copy to /etc/ts41x/alert.conf on the NAS (root:root 0600). Never commit the real address.
+ALERT_TO=owner@example.com

@@ -1,0 +1,3 @@
+# Spin down every disk after 20 min idle (-i 0 = default off, then per disk).
+START_HD_IDLE=true
+HD_IDLE_OPTS="-i 1200"

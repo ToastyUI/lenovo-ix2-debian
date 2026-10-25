@@ -1,0 +1,41 @@
+#!/bin/bash
+# Talk to the QNAP TS-41x PIC microcontroller (LEDs, buzzer, fan) on /dev/ttyS1, 19200 8N1.
+# Byte codes from qcontrol's qnap-pic.h (Ian Campbell, GPL).
+#
+#   ts41x-pic status  off|green|red|green-blink|red-blink|alt-blink|green-fast|red-fast|alt-fast
+#   ts41x-pic power   off|on|blink|fast
+#   ts41x-pic usb     off|on|blink
+#   ts41x-pic buzz    short|long
+#   ts41x-pic fan     stop|silence|low|medium|high|full
+#   ts41x-pic wol     on|off
+#   ts41x-pic watchdog off   (0x67; stock QTS bootcmd sends uart1 0x68 first)
+#   ts41x-pic raw     0x56
+set -euo pipefail
+TTY=${TS41X_PIC_TTY:-/dev/ttyS1}
+
+declare -A CODE=(
+  [status:off]=59 [status:green]=56 [status:red]=57
+  [status:green-blink]=5a [status:red-blink]=5b [status:alt-blink]=5c
+  [status:green-fast]=55 [status:red-fast]=54 [status:alt-fast]=58
+  [power:off]=4b [power:on]=4d [power:blink]=4e [power:fast]=4c
+  [usb:on]=60 [usb:blink]=61 [usb:off]=62
+  [buzz:short]=50 [buzz:long]=51
+  [fan:stop]=30 [fan:silence]=31 [fan:low]=32 [fan:medium]=33 [fan:high]=34 [fan:full]=35
+  [wol:on]=f2 [wol:off]=f3
+  [watchdog:off]=67
+)
+
+usage() { sed -n '2,13p' "$0" >&2; exit 2; }
+[ $# -eq 2 ] || usage
+if [ "$1" = raw ]; then
+  [[ $2 =~ ^0x[0-9a-fA-F]{2}$ ]] || usage
+  hex=${2#0x}
+else
+  hex=${CODE[$1:$2]:-} ; [ -n "$hex" ] || usage
+fi
+# One writer at a time; ts41x-picd only reads, so it does not take this lock.
+exec 9>/run/lock/ts41x-pic.lock
+flock -w 5 9
+stty -F "$TTY" 19200 cs8 -cstopb -parenb raw -echo
+# shellcheck disable=SC2059  # the byte itself is the format: \xNN
+printf "\\x$hex" >"$TTY"

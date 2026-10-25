@@ -1,0 +1,6 @@
+# Append to /etc/minidlna.conf
+media_dir=V,/srv/data/Films
+media_dir=P,/srv/data/Fotos
+media_dir=A,/srv/data/Muziek
+friendly_name=NAS
+inotify=yes

@@ -1,0 +1,12 @@
+[Unit]
+Description=QNAP TS-41x status LED from RAID state
+After=mdadm-raid.service local-fs.target ts41x-picd.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ts41x-pic watchdog off
+ExecStart=/usr/local/sbin/ts41x-pic power on
+ExecStart=/usr/local/sbin/ts41x-md-led
+ExecStop=/usr/local/sbin/ts41x-pic status alt-fast
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

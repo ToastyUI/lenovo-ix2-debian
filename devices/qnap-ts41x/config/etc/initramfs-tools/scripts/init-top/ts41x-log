@@ -1,0 +1,8 @@
+#!/bin/sh
+# Boot log to disk: step "init-top" (ts41x-logdisk)
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0 ;; esac
+/bin/ts41x-logdisk init-top
+# and every 3 seconds in the background, so a hang in between still leaves a recent log
+( while :; do sleep 3; /bin/ts41x-logdisk loop; done ) &

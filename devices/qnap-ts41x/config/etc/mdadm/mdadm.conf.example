@@ -1,0 +1,10 @@
+# Only assemble arrays created with --homehost=ts41x-debian (the Debian root/data array on
+# partition 3, see docs/handleiding.md). QTS's own system arrays (md4, md9, md13, md256, md322)
+# carry another homehost and stay untouched, so the QTS fallback stays intact.
+# The initramfs uses this file too: without the AUTO +homehost rule a root on md is not found.
+AUTO +homehost -all
+HOMEHOST ts41x-debian
+MAILADDR root
+PROGRAM /usr/local/sbin/ts41x-md-led
+# Arrays with another homehost can be listed explicitly:
+# ARRAY /dev/md1 metadata=1.0 UUID=...

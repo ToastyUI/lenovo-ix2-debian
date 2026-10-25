@@ -21,7 +21,15 @@ rootfs/     build.sh (debootstrap rootfs + kernel A), tune.sh / tune2.sh (perfor
 kernel/     build-kernel.sh (B), build-kernel-c.sh (C), full configs, config.diff (A -> B), config-B-to-C.diff
 uboot/      fw_setenv-usb-boot.sh (USB boot with fallback), redacted U-Boot environments
 config/     sanitized configuration examples (etc/, usr-local-sbin/)
+devices/    other Kirkwood boxes: device table (81 mainline DTBs), QNAP TS-41x kit
 ```
+
+## Other Kirkwood devices
+
+The rootfs, kernel configs and 256 MB tuning are not ix2-specific. [devices/](devices/README.md)
+lists every Kirkwood board with a mainline DTB and its status. A full kit exists for the
+**QNAP TS-41x** (Debian from disk with stock QTS as automatic fallback):
+[devices/qnap-ts41x](devices/qnap-ts41x/README.md). It is tested in simulation, not yet on hardware.
 
 Binary artifacts are attached to the GitHub **Release**, not stored in git. Historical initramfs files and Git history require a separate privacy review before public release; the sanitized source tree alone does not establish that those artifacts are safe to publish.
 

@@ -1,0 +1,49 @@
+#!/bin/sh
+# Rebuild the U-Boot multi-image for kernel <version> (default: running kernel) and write it
+# to the boot area of every disk. Called by the kernel postinst and initramfs post-update hooks.
+#   ts41x-update-boot [kernel-version]
+set -eu
+conf=/etc/ts41x/boot.conf
+# Only ever write disks on the NAS itself (never from a build chroot on another machine).
+model=$(tr -d '\0' 2>/dev/null </proc/device-tree/model || true)
+case "$model" in "QNAP TS419 family"|"QNAP TS219 family") ;; *)
+  echo "ts41x-update-boot: not running on a QNAP TS-x19 family board ('$model'), skipping" >&2; exit 0 ;;
+esac
+[ -r "$conf" ] || { echo "ts41x-update-boot: no $conf, skipping" >&2; exit 0; }
+# shellcheck source=/dev/null
+. "$conf"
+kver=${1:-$(uname -r)}
+zimg=/boot/vmlinuz-$kver
+initrd=/boot/initrd.img-$kver
+[ -f "$zimg" ] || { echo "ts41x-update-boot: $zimg missing" >&2; exit 1; }
+# The initramfs hook calls us before the initrd exists on a fresh kernel install; the kernel
+# postinst hook calls us again afterwards. Skip quietly until both are there.
+[ -f "$initrd" ] || { echo "ts41x-update-boot: $initrd not there yet, skipping" >&2; exit 0; }
+dtb=
+for d in "/usr/lib/linux-image-$kver/marvell/$DTB" "/usr/lib/linux-image-$kver/$DTB" "/boot/dts/$DTB"; do
+  [ -f "$d" ] && { dtb=$d; break; }
+done
+[ -n "$dtb" ] || { echo "ts41x-update-boot: $DTB not found for $kver" >&2; exit 1; }
+img=/boot/ts41x-boot-$kver.uimg
+/usr/local/sbin/ts41x-mkimage "$zimg" "$dtb" "$initrd" "$img" "Debian $kver" >/dev/null
+for m in $MODE; do
+  case "$m" in
+    usb|ext2)  # /boot.uimg on EVERY ext2 partition labelled BOOT (a USB stick, or one or more
+          # SATA disks for a redundant boot), read by U-Boot's ext2load usb / ext2load ide
+      devs=$(blkid -o device -t LABEL=BOOT 2>/dev/null)
+      [ -n "$devs" ] || { echo "ts41x-update-boot: no partition labelled BOOT" >&2; exit 1; }
+      for dev in $devs; do
+        mnt=$(findmnt -n -o TARGET -S "$dev" | head -1); tmpmnt=
+        if [ -z "$mnt" ]; then mnt=/run/ts41x-bootpart; mkdir -p "$mnt"; mount -t ext2 "$dev" "$mnt"; tmpmnt=1; fi
+        cp "$img" "$mnt/boot.uimg.new" && sync && mv "$mnt/boot.uimg.new" "$mnt/boot.uimg" && sync
+        cmp -s "$img" "$mnt/boot.uimg" || { echo "ts41x-update-boot: verify of $dev failed" >&2; exit 1; }
+        [ -n "$tmpmnt" ] && umount "$mnt"
+        echo "boot image copied to $dev:/boot.uimg"
+      done ;;
+    qts|raw)
+      /usr/local/sbin/ts41x-install-boot --image "$img" --mode "$m" ${DISKS:+--disks "$DISKS"} --write ;;
+    *) echo "ts41x-update-boot: unknown MODE '$m'" >&2; exit 1 ;;
+  esac
+done
+ln -sf "${img##*/}" /boot/ts41x-boot.uimg
+logger -t ts41x-update-boot "boot image for $kver written ($MODE)"

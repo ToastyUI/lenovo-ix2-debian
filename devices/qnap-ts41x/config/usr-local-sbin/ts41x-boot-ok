@@ -1,0 +1,21 @@
+#!/bin/sh
+# Runs once Debian is fully up: green LED, then re-arm U-Boot so the NEXT boot tries Debian again.
+# U-Boot disarms itself before every Debian attempt (see tools/ts41x-bootplan.py), so a Debian
+# that hangs or panics boots QTS after a power cycle; QTS then keeps booting until someone
+# re-arms Debian (see the guide), so a failure never turns into a reboot loop.
+set -eu
+# Fully up: stop the 5-minute PIC watchdog armed by U-Boot/QTS (0x68 in /etc/init.d/reboot of QTS)
+/usr/local/sbin/ts41x-pic watchdog off || true
+/usr/local/sbin/ts41x-pic status green || true
+/usr/local/sbin/ts41x-pic buzz short || true
+cur=$(fw_printenv -n bootcmd 2>/dev/null || true)
+case "$cur" in
+  "run bootcmd_debian") exit 0 ;;                 # already armed (e.g. rearmed manually)
+  "run bootcmd_fallback") ;;                       # normal: U-Boot disarmed itself for this boot
+  *) logger -t ts41x-boot-ok "unexpected bootcmd '$cur': not touching U-Boot"; exit 0 ;;
+esac
+fw_printenv -n bootcmd_debian >/dev/null 2>&1 || { logger -t ts41x-boot-ok "bootcmd_debian missing"; exit 0; }
+printf 'bootcmd=run bootcmd_debian\nts_last_ok=%s\n' "$(date +%Y%m%d%H%M)" >/run/ts41x-rearm.txt
+fw_setenv -s /run/ts41x-rearm.txt
+[ "$(fw_printenv -n bootcmd)" = "run bootcmd_debian" ] && logger -t ts41x-boot-ok "U-Boot re-armed for Debian"
+rm -f /run/ts41x-rearm.txt

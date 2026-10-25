@@ -1,0 +1,9 @@
+[Unit]
+Description=Debian booted completely: green LED, re-arm U-Boot for the next Debian boot
+After=multi-user.target ts41x-leds.service
+ConditionPathExists=/etc/fw_env.config
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ts41x-boot-ok
+[Install]
+WantedBy=multi-user.target
