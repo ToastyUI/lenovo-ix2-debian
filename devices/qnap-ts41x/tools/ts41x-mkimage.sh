@@ -18,6 +18,19 @@ cp "$DTB" "$tmp/board.dtb"
 UBOOT_PART=/ocp@f1000000/spi@10600/m25p128@0/partition@0
 [ "$(fdtget "$tmp/board.dtb" $UBOOT_PART label)" = "U-Boot" ] || { echo "unexpected DTB layout: $UBOOT_PART is not U-Boot" >&2; exit 1; }
 fdtput -t s "$tmp/board.dtb" $UBOOT_PART read-only ""
+# ramoops: 1 MiB at the top of the 256 MiB (kept out of the kernel's memory), so the kernel log
+# survives a watchdog reset and QTS can read it back through /dev/mem (boot QTS with mem=255M).
+fdtput -c "$tmp/board.dtb" /reserved-memory
+fdtput -t x "$tmp/board.dtb" /reserved-memory '#address-cells' 1
+fdtput -t x "$tmp/board.dtb" /reserved-memory '#size-cells' 1
+fdtput -t s "$tmp/board.dtb" /reserved-memory ranges ""
+fdtput -c "$tmp/board.dtb" /reserved-memory/ramoops@ff00000
+fdtput -t s "$tmp/board.dtb" /reserved-memory/ramoops@ff00000 compatible ramoops
+fdtput -t x "$tmp/board.dtb" /reserved-memory/ramoops@ff00000 reg 0x0ff00000 0x100000
+fdtput -t x "$tmp/board.dtb" /reserved-memory/ramoops@ff00000 console-size 0x80000
+fdtput -t x "$tmp/board.dtb" /reserved-memory/ramoops@ff00000 record-size 0x20000
+fdtput -t x "$tmp/board.dtb" /reserved-memory/ramoops@ff00000 pmsg-size 0x20000
+fdtput -t s "$tmp/board.dtb" /reserved-memory/ramoops@ff00000 no-map ""
 cat "$ZIMG" "$tmp/board.dtb" >"$tmp/zImage.fdt"
 mkimage -A arm -O linux -T multi -C none -a 0x00008000 -e 0x00008000 -n "${NAME:0:31}" \
   -d "$tmp/zImage.fdt:$INITRD" "$OUT" >/dev/null

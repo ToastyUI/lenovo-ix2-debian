@@ -12,8 +12,8 @@ VARIANT=${1:-C}; W=${2:-/root/ts41x/kernel}
 V=7.1.9 SHA=3271a4ae3897b38352980f2b0975bae61bca81c644d186221c5ae928bcc072b0
 REPO=$(cd "$(dirname "$0")/../../.." && pwd)
 case $VARIANT in
-  C) CFG=$REPO/kernel/config-7.1.9-ix2c-1; LV=-ts41xc-1 ;;
-  B) CFG=$REPO/kernel/config-7.1.9-ix2perf-1; LV=-ts41xb-1 ;;
+  C) CFG=$REPO/kernel/config-7.1.9-ix2c-1; LV=-ts41xc-2 ;;
+  B) CFG=$REPO/kernel/config-7.1.9-ix2perf-1; LV=-ts41xb-2 ;;
   *) echo "variant C or B" >&2; exit 2 ;;
 esac
 export ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- KDEB_PKGVERSION=1
@@ -23,8 +23,13 @@ echo "$SHA  linux-$V.tar.xz" | sha256sum -c -
 rm -rf linux-$V; tar -xf linux-$V.tar.xz; cd linux-$V
 cp "$CFG" .config
 scripts/config --set-str LOCALVERSION "$LV"
+# TS-41x without a serial console: kernel log in RAM that survives the SoC watchdog reset
+# (ramoops, read back from QTS through /dev/mem), and the watchdog driver built in so a booting
+# kernel takes over the watchdog that U-Boot armed within seconds.
+scripts/config --enable PSTORE --enable PSTORE_RAM --enable PSTORE_CONSOLE --enable PSTORE_PMSG \
+  --disable PSTORE_COMPRESS --enable ORION_WATCHDOG --enable WATCHDOG_HANDLE_BOOT_ENABLED
 make olddefconfig >/dev/null
-for o in SATA_MV PCI_MVEBU RTC_DRV_S35390A POWER_RESET_QNAP ARM_APPENDED_DTB ARM_ATAG_DTB_COMPAT MD_RAID10 WIREGUARD; do
+for o in SATA_MV PCI_MVEBU RTC_DRV_S35390A POWER_RESET_QNAP ARM_APPENDED_DTB ARM_ATAG_DTB_COMPAT MD_RAID10 WIREGUARD PSTORE_RAM PSTORE_CONSOLE ORION_WATCHDOG; do
   grep -q "^CONFIG_$o=y" .config || { echo "CONFIG_$o missing" >&2; exit 1; }
 done
 nice -n 19 make -j"$(nproc)" bindeb-pkg DPKG_FLAGS=-d >../build.out 2>&1 || { tail -40 ../build.out; exit 1; }
