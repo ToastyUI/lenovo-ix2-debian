@@ -104,9 +104,20 @@ QTS stap 3 dus opnieuw doen.
 
 ## 4. Debian inschakelen (SCHRIJFT de U-Boot-env)
 
-`mtd4.stage2.bin` wordt gemaakt uit `mtd4.after1.bin` met
-`ts41x-bootplan.py stage2 --env mtd4.after1.bin --lba 0x1035c8` (+ `qnap-uboot-env.py set`),
-op een pc met Python.
+`mtd4.stage2.bin` wordt gemaakt uit `mtd4.after1.bin`, op een pc met Python:
+```sh
+ts41x-bootplan.py stage2 --env mtd4.after1.bin --lba 0x1035c8 --pic-wdt-on --pic-led \
+  --image boot.uimg --extra-args "mem=256M net.ifnames=0" --set ethaddr=<MAC uit QTS> -o stage2.txt
+qnap-uboot-env.py set mtd4.after1.bin -s stage2.txt -o mtd4.stage2.bin
+```
+Waarom deze opties (geleerd op de TS-412 van de inventaris):
+- `--image`: QNAP's U-Boot geeft geen initrd-ATAG door; QTS en Debian 10 gebruiken `initrd=` in de
+  kernelregel. Het script berekent dat adres uit het image. Zonder dit ziet de kernel geen initramfs
+  en blijft hij hangen (de soft-reset van de chip werkt op dit bord niet, dus ook geen herstart).
+- `--pic-wdt-on`: PIC-watchdog aan (5 min), zoals QTS' eigen reboot doet. Hangt Debian, dan komt
+  QTS vanzelf terug. `ts41x-boot-ok` zet hem uit zodra Debian draait.
+- `mem=256M`: de mainline-DTB zegt 512 MB.
+- `--set ethaddr=`: het MAC uit QTS, zoals Debian's `flash-debian` doet.
 
 ```bat
 ssh admin@NAS "md5sum /dev/mtdblock4"

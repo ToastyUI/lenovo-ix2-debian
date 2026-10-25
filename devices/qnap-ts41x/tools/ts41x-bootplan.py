@@ -84,6 +84,10 @@ def main():
                          "(GPL source, docs/uboot-analysis.md), so this only works on a reflashed/custom U-Boot.")
     ap.add_argument("--pic-led", action="store_true", help="add uart1 LED feedback (only if the analyzer found uart1)")
     ap.add_argument("--extra-args", default="", help="appended to the Debian kernel command line")
+    ap.add_argument("--image", metavar="boot.uimg",
+                    help="the multi-image that will be written: adds initrd=<addr>,<size> to the kernel "
+                         "command line, computed from where the initrd sits inside the image at LOAD_ADDR. "
+                         "QNAP's U-Boot passes no initrd ATAG (QTS and Debian 10 both use initrd= on this box)")
     ap.add_argument("--set", metavar="NAME=VALUE", action="append", default=[],
                     help="also set this env variable in stage2, e.g. ethaddr=00:08:9B:D0:24:DC")
     ap.add_argument("--pic-wdt-on", action="store_true",
@@ -127,6 +131,20 @@ def main():
         if a.lba and int(a.lba, 16) >= 1 << 28:
             sys.exit("boot area beyond LBA28 (128 GiB): old U-Boot IDE code may not reach it")
         led = LED_TRYING if a.pic_led else ""
+        if a.image:
+            import struct
+            with open(a.image, "rb") as fh:
+                img = fh.read(64 + 16)
+            if img[:4] != b"\x27\x05\x19\x56" or img[30] != 4:
+                sys.exit(f"{a.image} is not a U-Boot multi-image")
+            klen, ilen, term = struct.unpack(">3I", img[64:76])
+            if term != 0 or ilen == 0:
+                sys.exit(f"{a.image}: expected exactly two parts (kernel, initrd)")
+            off = 64 + 12 + klen
+            off += (-off) % 4
+            initrd = f"initrd=0x{int(LOAD_ADDR, 16) + off:x},0x{ilen:x}"
+            print(f"{a.image}: kernel {klen} bytes, initrd {ilen} bytes -> {initrd}", file=sys.stderr)
+            a.extra_args = (a.extra_args + " " + initrd).strip()
         chain = ["setenv bootcmd run bootcmd_fallback", "saveenv"] + ([PIC_WDT_ON] if a.pic_wdt_on else []) + ([PIC_WDT_OFF] if a.pic_wdt_off else []) \
             + ([led.strip("; ")] if led else [])
         out += [("bootcmd_fallback", "setenv bootargs $(bootargs_stock); run bootcmd_stock"),
