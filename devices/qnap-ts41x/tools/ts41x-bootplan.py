@@ -48,7 +48,7 @@ AREA_SECTORS = "0x18000"   # 48 MiB, must match tools/ts41x-install-boot.sh
 # Debian cmdline. Kept short on purpose: old U-Boot rejects or truncates command lines longer
 # than its console buffer (often 256 bytes), so every executed variable stays under MAX_CMD.
 # (The U-Boot flash partition is made read-only in the DTB instead, see ts41x-mkimage.)
-DEBIAN_ARGS = "console=ttyS0,115200 root=LABEL=rootfs rootdelay=10 panic=10"
+DEBIAN_ARGS = "root=LABEL=rootfs rootdelay=10 panic=10"   # no serial console, see ts41x-mkimage.sh
 MAX_CMD = 200
 STOCK_PATTERN = re.compile(r"cp\.[bl] 0xf82\d+ 0x800000 .*bootm 0x800000")
 

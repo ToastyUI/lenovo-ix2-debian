@@ -22,8 +22,15 @@ fdtput -t s "$tmp/board.dtb" $UBOOT_PART read-only ""
 # survives a watchdog reset and QTS can read it back through /dev/mem (boot QTS with mem<=255M).
 # Via dtc: fdtput cannot write the empty "ranges"/"no-map" properties (it writes one 0 byte).
 dtc -q -I dtb -O dts -o "$tmp/board.dts" "$tmp/board.dtb"
+# No serial console: the first write to UART0 (the console replay at "console [ttyS0] enabled")
+# hangs the TS-412 (poging 7 ramoops log), the ix2 never uses UART0, and nobody has a cable
+# anyway. The kernel log goes to ramoops (and tty0); ttyS0/ttyS1 stay available as plain ports.
 cat >>"$tmp/board.dts" <<'D'
 / {
+	chosen {
+		/delete-property/ stdout-path;
+		/delete-property/ bootargs;
+	};
 	reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
