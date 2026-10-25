@@ -1,0 +1,11 @@
+#!/bin/sh
+# ts41x-logdisk and its tools in the initramfs (see scripts/*/ts41x-log)
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0 ;; esac
+. /usr/share/initramfs-tools/hook-functions
+copy_exec /usr/local/sbin/ts41x-logdisk /bin
+copy_exec /usr/bin/dmesg /bin
+copy_exec /usr/bin/dd /bin
+copy_exec /usr/bin/tail /bin
+copy_exec /usr/bin/cut /bin

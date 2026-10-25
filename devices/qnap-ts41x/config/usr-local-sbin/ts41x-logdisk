@@ -1,0 +1,16 @@
+#!/bin/sh
+# ts41x-logdisk STEP: note STEP in the kernel log and write the whole kernel log to the spare
+# sectors of partition 3 on every disk: sectors 32..255 of sdX3 (112 KiB) lie between the md
+# superblock (sectors 8..15) and the array data (sector 272, mdadm 2.6.3 metadata 1.2), so neither
+# QTS nor the file system ever touches them and the log survives a hang plus power cycle.
+# Read back on QTS:  dd if=/dev/sda3 bs=512 skip=32 count=224 2>/dev/null | tr -d '\000'
+LBA=32 CNT=224
+echo "ts41x-log: $1 at $(cut -d' ' -f1 /proc/uptime)s" >/dev/kmsg 2>/dev/null
+tmp=/run/ts41x-dmesg.txt
+dmesg 2>/dev/null | tail -c $((CNT * 512 - 256)) >"$tmp" || exit 0
+echo "==== ts41x-log end ($1) ====" >>"$tmp"
+for d in /dev/sda /dev/sdb /dev/sdc /dev/sdd; do
+  [ -b "${d}3" ] || continue
+  dd if="$tmp" of="${d}3" bs=512 seek=$LBA conv=notrunc,sync 2>/dev/null
+done
+sync
